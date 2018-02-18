@@ -40,14 +40,16 @@ allPoints[allPoints$Site == "15A4",c(1:2)] = allPoints %>% filter(Site == "15A4"
 
 # Set dates to "round" equivalents.
 
-
+allPoints = allPoints %>% mutate(Round = factor(ifelse(test = Date %in% c("2017-07-07", "2017-07-17"), yes = "Round 1", 
+                                    ifelse(test = Date %in% c("2017-07-30", "2017-07-28"), yes = "Round 2", no = "Round 3"))),
+                                 RoundBySite = interaction(Site, Round))
 
 xlim = c(-3,3)
 ylim = c(-2,2)
 
 plot = ggplot(allPoints) + 
-  geom_path(aes(x = lon, y = lat, color = Date)) + 
-  coord_cartesian(xlim = xlim, ylim = ylim)
+  geom_path(aes(x = lon, y = lat, color = RoundBySite)) + 
+  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 plot
   
 
