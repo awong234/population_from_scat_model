@@ -21,7 +21,11 @@ getGPX = function(){
 convertPoints = function(){
   
   allPoints = foreach(i = seq_along(out), .combine = rbind) %do% {
-    data.frame(out[[i]]@coords, Site = sites[i], Date = out[[i]]@data$time %>% as.Date %>% unique) %>% rename(Easting = coords.x1, Northing = coords.x2)
+    data.frame(out[[i]]@coords, 
+               Site = sites[i], 
+               Date = out[[i]]@data$time %>% as.Date %>% unique, 
+               Time = out[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
+      rename(Easting = coords.x1, Northing = coords.x2)
   }
   
   allPoints$Date = as.factor(allPoints$Date)
@@ -38,7 +42,7 @@ convertPoints = function(){
   
 }
 
-getGrid = function(adj.bbox = 100){
+getScaledGrid = function(adj.bbox = 100){ # Obtain a scaled grid from the bounding box from a back-scaled allPoints dataset.
   
   allPoints_bt = apply(X = allPoints@coords, MARGIN = 1, FUN = function(x){x*scaled_12B2_scale + scaled_12B2_center}) %>% t %>% data.frame
   

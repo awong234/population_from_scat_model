@@ -24,10 +24,9 @@ library(rgdal)
 
 sites = c(rep("12B2",3), rep("15A4", 3))
 
-out = getGPX()
+out = getGPX() #loads gpx files
 
-allPoints = convertPoints()
-
+allPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
 
 # Need to normalize points to 0,1, but they need to be PER SITE, not all
 # together. In this way, the centroids of the sites are centered on 0, and state
@@ -57,7 +56,7 @@ ylim = c(-2,2)
 
 # Generate grid
 
-scaledGrid = getGrid()
+scaledGrid = getScaledGrid()
 
 bbox_scaled = getBbox(scaledGrid)
 
@@ -79,7 +78,9 @@ scatXY = cbind.data.frame(x = runif(n = NScat, min = bbox_scaled[1,1], max = bbo
 plotTransects + 
   geom_point(data = scatXY, aes(x = x, y = y), shape = 1)
 
-# Simulate encounters of scats ------------------------------------------------------------------------------------------------------------
+# Simulate encounters of scats -------------------------------------------------------------------------------------------------------------
+
+
 
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
