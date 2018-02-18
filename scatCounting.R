@@ -9,6 +9,7 @@
 
 library(ggplot2)
 library(dplyr)
+library(foreach)
 
 # Format example dog tracks ------------------------------------------------------------------------------------------------------------
 
@@ -16,23 +17,51 @@ library(rgdal)
 
 gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]
 
+sites = c(rep("12B2",3), rep("15A4", 3))
+
 gpxLayers = ogrListLayers(gpxFiles[1])
 
 out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
 
-names(out) = c("12B2", "15A4")
+names(out) = gpxFiles
 
-points_15A4 = out$`15A4`@coords %>% data.frame %>% rename(lon = coords.x2, lat = coords.x1)
-points_12B2 = out$`12B2`@coords %>% data.frame
+allPoints = foreach(i = seq_along(out), .combine = rbind) %do% {
+  data.frame(out[[i]]@coords, Site = sites[i], Date = out[[i]]@data$time %>% as.Date %>% unique) %>% rename(lon = coords.x1, lat = coords.x2)
+}
 
-ggplot() + 
-  geom_point(data = points_15A4, aes(x = ))
+allPoints$Date = as.factor(allPoints$Date)
 
-# Need to normalize points to 0,1
+# Need to normalize points to 0,1, but they need to be PER SITE, not all
+# together. In this way, the centroids of the sites are centered on 0, and state
+# space settings, scat populations apply to both.
+
+allPoints[allPoints$Site == "12B2",c(1:2)] = allPoints %>% filter(Site == "12B2") %>% select(lon, lat) %>% scale
+allPoints[allPoints$Site == "15A4",c(1:2)] = allPoints %>% filter(Site == "15A4") %>% select(lon, lat) %>% scale
+
+# Set dates to "round" equivalents.
 
 
+
+xlim = c(-3,3)
+ylim = c(-2,2)
+
+plot = ggplot(allPoints) + 
+  geom_path(aes(x = lon, y = lat, color = Date)) + 
+  coord_cartesian(xlim = xlim, ylim = ylim)
+plot
+  
 
 # Simulation of scats & state space ----------------------------------------------------------------------------------------------------
+
+NScat = 600
+
+set.seed(1)
+
+scatXY = cbind.data.frame(x = runif(n = NScat, min = xlim[1], max = xlim[2]),
+                          y = runif(n = NScat, min = ylim[1], max = ylim[2]))
+
+plot + 
+  geom_point(data = scatXY, aes(x = x, y = y), shape = 1)
 
 # Simulate encounters of scats ------------------------------------------------------------------------------------------------------------
 
