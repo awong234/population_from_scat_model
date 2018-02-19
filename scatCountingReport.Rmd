@@ -9,6 +9,14 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+source('functions.R')
+
+library(ggplot2)
+library(dplyr)
+library(foreach)
+library(broom)
+library(rgdal)
 ```
 
 # Overview
@@ -26,6 +34,50 @@ The major components of this simulation are as follows:
 We obtain two example dog tracks from 2017 to examine and test under this framework. The sites referenced are 12B2, and 15A4, during three consecutive visits within mid-July to August. 
 
 The site 12B2 exhibited extremely high moose density, and thus the dog movement is no doubt affected heavily by this. In the case that this movement -- being unexplained in the model we're using -- affects model performance, the other site 15A4 was selected to be tested as well. This site exhibited no moose collections throughout the summer, and the dog movement is taken to be the most 'natural' search pattern under normal conditions. 15A4 is also relatively easy terrain, so the dogs' movement was not inhibited by thorns, slope, water, or the like.
+
+### Examples
+
+```{r dogExample, echo = F, message = F, warning = F, error = F}
+sites = c(rep("12B2",3), rep("15A4", 3))
+
+out = getGPX() #loads gpx files
+
+allPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
+
+# Scale individual transect points. Obtain scaling parameters.
+
+scaled_12B2 = allPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
+scaled_15A4 = allPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
+
+scaled_12B2_center = attr(x = scaled_12B2, which = 'scaled:center')
+scaled_12B2_scale = attr(x = scaled_12B2, which = 'scaled:scale')
+
+scaled_15A4_center = attr(x = scaled_15A4, which = 'scaled:center')
+scaled_15A4_scale = attr(x = scaled_15A4, which = 'scaled:scale')
+
+allPoints@coords[allPoints@data$Site == "12B2"] = scaled_12B2
+allPoints@coords[allPoints@data$Site == "15A4"] = scaled_15A4
+
+meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
+
+
+# Assign new coordinates to data frame.
+
+xlim = c(-3,3)
+ylim = c(-2,2)
+
+# Generate grid
+
+scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, Northing)
+
+bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
+
+ggplot() + 
+  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
+  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
+  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
+
+```
 
 
 
