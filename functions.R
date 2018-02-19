@@ -140,7 +140,8 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
   scatXY = cbind.data.frame(ID = 1:scats_init,
                             x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
                             y = runif(n = scats_init, min = bbox_scaled[2,1], max = bbox_scaled[2,2]),
-                            RoundDeposited = factor(x = 0, levels = c(0:maxR)), pEnc = 0, Removed = factor(x = 0, levels = c(0,1)))
+                            RoundDeposited = factor(x = 0, levels = c(0:maxR)), pEnc = 0, Removed = factor(x = 0, levels = c(0,1)),
+                            RoundRemoved = factor(x = NA, levels = c(1:maxR)))
   
   gridX = gridLayer %>% pull(Easting) %>% unique %>% sort
   gridY = gridLayer %>% pull(Northing) %>% unique %>% sort
@@ -169,6 +170,8 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
     
     # Simulate encounters. All scats encountered will be removed.
     scatXY[scatXY$ID %in% scatsAvail$ID,"Removed"] = rbinom(n = 1, size = 1, prob = scatsAvail$pEnc)
+    
+    scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved))
     
     if(debug){
       gplot = ggplot() +

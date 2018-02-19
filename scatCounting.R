@@ -72,27 +72,31 @@ ggplot() +
 
 set.seed(1)
 
-scats_init = rpois(n = 1, lambda = 500)
-
+scats_init = 500
 
 scatXY = cbind.data.frame(ID = 1:scats_init,
                           x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
                           y = runif(n = scats_init, min = bbox_scaled[2,1], max = bbox_scaled[2,2]),
-                          Round = 0, pEnc = 0, Removed = 0)
+                          RoundDeposited = factor(x = 0, levels = c(0:maxR)), pEnc = 0, Removed = factor(x = 0, levels = c(0,1)))
+
+gridX = scaledGrid %>% pull(Easting) %>% unique %>% sort
+gridY = scaledGrid %>% pull(Northing) %>% unique %>% sort
+
+
+scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = gridLayer %>% select(Easting, Northing))
+
+scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = gridLayer)
 
 # Try out binning scats by grid. 
 
-gridX = scaledGrid$Easting %>% unique %>% sort
-gridY = scaledGrid$Northing %>% unique %>% sort
-
 d = countPointsInGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
+
+gridX = scaledGrid %>% pull(Easting) %>% unique %>% sort
+gridY = scaledGrid %>% pull(Northing) %>% unique %>% sort
 
 scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
 
-scatXY = scatXY %>% mutate(gridID = data.frame(x = gridX[scatsGridRef$x], y = gridY[scatsGridRef$y]) %>% 
-                             left_join(y = scaledGrid, by = c("x" = "Easting", "y" = "Northing")) %>% pull(ID))
-
-
+scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = scaledGrid)
 
 ggplot() + 
   geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
