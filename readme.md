@@ -47,7 +47,7 @@ Validation requires knowledge of where the scats were generated, where dog track
 
 This part is easy enough. I test using an initial deposition of 500 uniformly distributed scat piles. 
 
-<img src="readme_files/figure-html/scatPlot-1.png" width="1920" height="1080" />
+![](readme_files/figure-html/scatPlot-1.png)<!-- -->
 
 In the above plot, we have scat locations (red '+'), and grid cells with numbers marking how many scat piles exist within the grid. The function written to count any given point layer within grid cells is working properly - it is zoomed in to demonstrate this, but is correct for the wider grid on the whole. 
 

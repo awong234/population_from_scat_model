@@ -110,7 +110,7 @@ Validation requires knowledge of where the scats were generated, where dog track
 
 This part is easy enough. I test using an initial deposition of 500 uniformly distributed scat piles. 
 
-```{r scatPlot, out.height=1080, out.width=1920, dpi = 150}
+```{r scatPlot}
 
 
 set.seed(1)
