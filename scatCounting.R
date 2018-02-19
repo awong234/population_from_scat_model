@@ -56,31 +56,79 @@ ylim = c(-2,2)
 
 # Generate grid
 
-scaledGrid = getScaledGrid()
+scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, Northing)
 
-bbox_scaled = getBbox(scaledGrid)
+bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
 
-plotTransects = ggplot() + 
+ggplot() + 
   geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
   geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
   coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
-plotTransects
+
 
 # Simulation of scats & state space ----------------------------------------------------------------------------------------------------
 
-NScat = 600
-
 set.seed(1)
 
-scatXY = cbind.data.frame(x = runif(n = NScat, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
-                          y = runif(n = NScat, min = bbox_scaled[2,1], max = bbox_scaled[2,2]))
+scats_init = rpois(n = 1, lambda = 500)
 
-plotTransects + 
-  geom_point(data = scatXY, aes(x = x, y = y), shape = 1)
+
+scatXY = cbind.data.frame(ID = 1:scats_init,
+                          x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
+                          y = runif(n = scats_init, min = bbox_scaled[2,1], max = bbox_scaled[2,2]),
+                          Round = 0, pEnc = 0, Removed = 0)
+
+# Try out binning scats by grid. 
+
+gridX = scaledGrid$Easting %>% unique %>% sort
+gridY = scaledGrid$Northing %>% unique %>% sort
+
+d = countPointsInGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
+
+scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
+
+scatXY = scatXY %>% mutate(gridID = data.frame(x = gridX[scatsGridRef$x], y = gridY[scatsGridRef$y]) %>% 
+                             left_join(y = scaledGrid, by = c("x" = "Easting", "y" = "Northing")) %>% pull(ID))
+
+
+
+ggplot() + 
+  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
+  geom_text(data = d, aes(x = gridX[x], y = gridY[y], label = Freq)) + 
+  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
+  geom_point(data = scatXY, aes(x = x, y = y), shape = 1) + 
+  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 
 # Simulate encounters of scats -------------------------------------------------------------------------------------------------------------
 
+# First, we will need to know which grids were searched at all. 
 
+gridSearched = countPointsInGrid(queryPoints = allPoints@coords, gridPoints = scaledGrid)
+
+ggplot() + 
+  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
+  geom_text(data = gridSearched, aes(x = gridX[x], y = gridY[y], label = Freq)) + 
+  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
+  geom_point(data = scatXY, aes(x = x, y = y), shape = 1) + 
+  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
+
+
+
+
+# Then, we will need to know how much distance was covered within the grid cell,
+# and how much time was taken to cover it.
+
+# Then, we will need to tabulate the scats that are available for encounter, and
+# where they are.
+
+# Then, we calculate probability of encounter based on this metric, for each
+# scat within the grid cell. Those encountered are removed, and a new set of
+# 'recruited' scats are generated. Of course, they are independent of the
+# previous set, so it's likely just a matter of a new Poisson distributed population.
+
+scatsAvail = scatXY %>% filter(Removed == 0)
+
+scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 20, maxR = 3, debug = F)
 
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
