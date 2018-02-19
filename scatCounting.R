@@ -68,6 +68,8 @@ ggplot() +
 
 # Simulation of scats & state space ----------------------------------------------------------------------------------------------------
 
+# Example follows. Dedicated function has been created.
+
 set.seed(1)
 
 scats_init = rpois(n = 1, lambda = 500)
@@ -103,18 +105,6 @@ ggplot() +
 
 # First, we will need to know which grids were searched at all. 
 
-gridSearched = countPointsInGrid(queryPoints = allPoints@coords, gridPoints = scaledGrid)
-
-ggplot() + 
-  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
-  geom_text(data = gridSearched, aes(x = gridX[x], y = gridY[y], label = Freq)) + 
-  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
-  geom_point(data = scatXY, aes(x = x, y = y), shape = 1) + 
-  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
-
-
-
-
 # Then, we will need to know how much distance was covered within the grid cell,
 # and how much time was taken to cover it.
 
@@ -126,9 +116,6 @@ ggplot() +
 # 'recruited' scats are generated. Of course, they are independent of the
 # previous set, so it's likely just a matter of a new Poisson distributed population.
 
-scatsAvail = scatXY %>% filter(Removed == 0)
-
-scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 20, maxR = 3, debug = F)
-
+scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F)
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
