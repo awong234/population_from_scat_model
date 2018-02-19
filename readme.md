@@ -23,35 +23,9 @@ The site 12B2 exhibited extremely high moose density, and thus the dog movement 
 ### Examples
 
 
-```
-## OGR data source with driver: GPX 
-## Source: "12B2_07.07.17_SM.gpx", layer: "track_points"
-## with 6270 features
-## It has 26 fields
-## OGR data source with driver: GPX 
-## Source: "12B2_07.30.17_SM.gpx", layer: "track_points"
-## with 12661 features
-## It has 26 fields
-## OGR data source with driver: GPX 
-## Source: "12B2_08.09.17_MP.gpx", layer: "track_points"
-## with 7073 features
-## It has 26 fields
-## OGR data source with driver: GPX 
-## Source: "15A4_07.17.17_MP.gpx", layer: "track_points"
-## with 5151 features
-## It has 26 fields
-## OGR data source with driver: GPX 
-## Source: "15A4_07.28.17_SM.gpx", layer: "track_points"
-## with 5737 features
-## It has 26 fields
-## OGR data source with driver: GPX 
-## Source: "15A4_08.07.17_JL.gpx", layer: "track_points"
-## with 5927 features
-## It has 26 fields
-```
 
-![](scatCountingReport_files/figure-html/dogExample-1.png)<!-- -->
+![](readme_files/figure-html/dogPLot-1.png)<!-- -->
 
-
+In the figure above, we see two triangular transects, and notice that multiple 'Rounds' or visits are made to each site, depicted in the image. They are centered such that the centroid of the transects are on 0, but independently scaled so that the transects are the same size relative to each other. The grid was first generated to be 50m x 50m, and then scaled by the same amount. To easily verify this, count the squares covering the vertical portion of 12B2; they number 20, indicating that the length of the side is approximately 1km, which is true.
 
 # Simulation of scat deposition

@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F)
 
 source('functions.R')
 
@@ -37,7 +37,8 @@ The site 12B2 exhibited extremely high moose density, and thus the dog movement 
 
 ### Examples
 
-```{r dogExample, echo = F, message = F, warning = F, error = F}
+```{r dogExample, echo = F, message = F, warning = F, error = F, include = F}
+
 sites = c(rep("12B2",3), rep("15A4", 3))
 
 out = getGPX() #loads gpx files
@@ -72,13 +73,16 @@ scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, 
 
 bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
 
-ggplot() + 
-  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
-  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
-  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
-
 ```
 
+```{r dogPLot, echo = F, dpi=150}
 
+ggplot() + 
+  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
+  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = Site, linetype = Round)) + 
+  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
+```
+
+In the figure above, we see two triangular transects, and notice that multiple 'Rounds' or visits are made to each site, depicted in the image. They are centered such that the centroid of the transects are on 0, but independently scaled so that the transects are the same size relative to each other. The grid was first generated to be 50m x 50m, and then scaled by the same amount. To easily verify this, count the squares covering the vertical portion of 12B2; they number 20, indicating that the length of the side is approximately 1km, which is true.
 
 # Simulation of scat deposition
