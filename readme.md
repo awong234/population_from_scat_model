@@ -24,8 +24,11 @@ The site 12B2 exhibited extremely high moose density, and thus the dog movement 
 
 
 
-![dog Tracks](dogTrack.gif)
+![](readme_files/dogTrack.gif)
 
-In the figure above, we see two triangular transects, and notice that multiple 'Rounds' or visits are made to each site, depicted in the image. They are centered such that the centroid of the transects are on 0, but independently scaled so that the transects are the same size relative to each other. The grid was first generated to be 50m x 50m, and then scaled by the same amount. To easily verify this, count the squares covering the vertical portion of 12B2; they number 20, indicating that the length of the side is approximately 1km, which is true.
+In the figure above, we see two triangular transects, and notice that multiple 'Rounds' or visits are made to each site, depicted in the image. They are centered such that the centroid of the transects are on 0, but independently scaled so that the transects are the same size relative to each other. The grid was first generated to be 50m x 50m, and then scaled by the same amount. To easily verify the grid size, count the squares covering the vertical portion of 12B2; they number 20, indicating that the length of the side is approximately 1km, which is true.
+
+I scaled and centered the dog tracks so that they may sample the same population of scats, to observe any differences in estimates.
 
 # Simulation of scat deposition
+
