@@ -1,4 +1,4 @@
-# Scat_Counting_Simulation
+# Scat Counting Simulation
 Alec Wong  
 February 19, 2018  
 
@@ -24,7 +24,7 @@ The site 12B2 exhibited extremely high moose density, and thus the dog movement 
 
 
 
-![](readme_files/figure-html/dogPLot-1.png)<!-- -->
+![dog Tracks](dogTrack.gif)
 
 In the figure above, we see two triangular transects, and notice that multiple 'Rounds' or visits are made to each site, depicted in the image. They are centered such that the centroid of the transects are on 0, but independently scaled so that the transects are the same size relative to each other. The grid was first generated to be 50m x 50m, and then scaled by the same amount. To easily verify this, count the squares covering the vertical portion of 12B2; they number 20, indicating that the length of the side is approximately 1km, which is true.
 
