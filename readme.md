@@ -2,12 +2,6 @@
 Alec Wong  
 February 19, 2018  
 
-<style>
-table, th, td {
-    border: 1px solid black;
-    padding: 8px;
-}
-</style>
 
 
 

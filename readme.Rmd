@@ -7,12 +7,6 @@ output:
     keep_md: true
 ---
 
-<style>
-table, th, td {
-    border: 1px solid black;
-    padding: 8px;
-}
-</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F)
