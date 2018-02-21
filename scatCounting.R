@@ -74,6 +74,8 @@ set.seed(1)
 
 scats_init = 500
 
+maxR = 3
+
 scatXY = cbind.data.frame(ID = 1:scats_init,
                           x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
                           y = runif(n = scats_init, min = bbox_scaled[2,1], max = bbox_scaled[2,2]),
@@ -83,9 +85,9 @@ gridX = scaledGrid %>% pull(Easting) %>% unique %>% sort
 gridY = scaledGrid %>% pull(Northing) %>% unique %>% sort
 
 
-scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = gridLayer %>% select(Easting, Northing))
+scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
 
-scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = gridLayer)
+scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = scaledGrid)
 
 # Try out binning scats by grid. 
 
@@ -120,6 +122,7 @@ ggplot() +
 # 'recruited' scats are generated. Of course, they are independent of the
 # previous set, so it's likely just a matter of a new Poisson distributed population.
 
-scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F)
+scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1)
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
+

@@ -118,7 +118,7 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
   
 }
 
-simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F){
+simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1){
   
   if(debug){browser()}
   
@@ -135,7 +135,7 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
   # 'recruited' scats are generated. Of course, they are independent of the
   # previous set, so it's likely just a matter of a new Poisson distributed population. 
   
-  set.seed(1)
+  set.seed(seed)
   
   scatXY = cbind.data.frame(ID = 1:scats_init,
                             x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
@@ -190,7 +190,7 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
       newScatN = rpois(n = 1, lambda = recruit_rate)
       
       if(r == 1) {
-        depositionLog = vector(mode = 'integer', length = maxR+1)
+        depositionLog = vector(mode = 'integer', length = maxR)
         depositionLog[1] = scats_init
         depositionLog[2] = newScatN
       }
@@ -232,6 +232,7 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
   }
   
   names(scatXY.rec) = paste("Round", 0:maxR)
+  names(depositionLog) = paste("Round", 0:(maxR-1)) 
   
   toReturn = list("ScatRecords" = scatXY.rec, "DepositionRecords" = depositionLog)
   
