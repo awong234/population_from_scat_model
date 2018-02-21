@@ -118,7 +118,22 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
   
 }
 
-simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1){
+simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, probForm = "indicator", p0 = 0.8){
+  
+  if(probForm %in% c("indicator", "length", "constant")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
+  if(p0 < 0 | p0 > 1){stop("p0 must be bounded by 0,1.")}
+  
+  # function for probForm
+  
+  # there are two forms for probForm - 'length' and 'indicator'. 
+  
+  # Form indicator
+  
+  # p(detect) = p0 * I(track-in-grid)
+  
+  # Form length
+  
+  # p(detect) = p0 * (len(track-in-grid))
   
   if(debug){browser()}
   
@@ -163,25 +178,57 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
     
     scatsAvail = scatXY %>% filter(Removed == 0, gridID %in% gridsVisitedID$ID)
     
-    # To add later: a metric for encounter probability that models time and distance searched. For now, set as 1.
-    scatsAvail$pEnc = 1 #later, some probability model ~ time, distance
+    if(debug){ #show which scats are available to be detected
+      print(
+        ggplot() +
+          geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
+          geom_text(data = gridLayer, aes(x = Easting, y = Northing, label = ID), size = 3) +
+          geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing), color = 'blue') +
+          geom_point(data = scatsAvail, aes(x = x, y = y)) + coord_map()
+      )
+      
+    }
     
-    scatXY[scatXY$ID %in% scatsAvail$ID,"pEnc"] = 1
     
-    # Simulate encounters. All scats encountered will be removed.
-    scatXY[scatXY$ID %in% scatsAvail$ID,"Removed"] = rbinom(n = 1, size = 1, prob = scatsAvail$pEnc)
+    # Probability models here. 
+    
+    if(probForm == "constant"){
+      scatXY[scatXY$ID %in% scatsAvail$ID, "Removed"] = 1
+    }
+    
+    if(probForm == "indicator"){
+      
+      scatsAvail$pEnc = p0
+      
+      scatXY[scatXY$ID %in% scatsAvail$ID,"pEnc"] = p0
+      
+      # Simulate encounters. All scats encountered will be removed.
+      scatXY[scatXY$ID %in% scatsAvail$ID,"Removed"] = rbinom(n = nrow(scatsAvail), size = 1, prob = p0)
+      
+    }
+    
+    if(probForm == "length"){
+      
+      stop("This function is not available yet")
+      
+    }
     
     scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved))
     
     if(debug){
-      gplot = ggplot() +
-        geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
-        geom_text(data = gridLayer, aes(x = Easting, y = Northing, label = ID)) +
-        geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing)) +
-        geom_point(data = scatXY, aes(x = x, y = y, shape = Removed, color = RoundDeposited), size = 5) + 
-        scale_shape_manual(values = c(16,1))
-      gplot
+      print(
+        ggplot() +
+          geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
+          geom_text(data = gridLayer, aes(x = Easting, y = Northing, label = ID), size = 3) +
+          geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing), color = 'blue') +
+          geom_point(data = scatXY %>% filter(ID %in% scatsAvail$ID), aes(x = x, y = y, shape = Removed, color = RoundDeposited, size = Removed)) + 
+          scale_shape_manual(values = c(16,1)) + scale_size_manual(values = c(1,5)) +
+          coord_map()
+      )
+      
     }
+    
+    
     
     # Simulate new scat deposition; no need on last round. 
     

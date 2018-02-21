@@ -122,7 +122,7 @@ ggplot() +
 # 'recruited' scats are generated. Of course, they are independent of the
 # previous set, so it's likely just a matter of a new Poisson distributed population.
 
-scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1)
+scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = T, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
 
