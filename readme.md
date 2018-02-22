@@ -47,7 +47,7 @@ In the above plot, we have scat locations (red '+'), and grid cells with numbers
 
 ## Dog track points within grid
 
-I also need to verify that I'm detecting any dog track within the grids. In future updates, a function will be written to generate a probability of detection as a function of track length, area covered, time, or a combination of these, but for now I am using a binary track present/absent system.
+I also need to verify that I'm detecting any dog track within the grids. Below, I test a function generating a probability of detection based on track length within a grid, or based on some baseline probability of detection, but for validation I am using detection == 1.
 
 
 
@@ -200,6 +200,83 @@ Let's look at individual 41. The scat was deposited in round 0, but wasn't remov
 ![](readme_files/indScatGIF.gif)
 
 In the above plot, notice that this particular scat pile is not encountered in the first occasion, due to the lack of any track points in its grid cell. In the second occasion, it is encountered due to the change in the dog track pattern directing it into the grid cell of the scat.
+
+## Incorporating detection probability
+
+### Indicator model
+
+Simulation of detection probability in the 'indicator' fashion proceeds as follows:
+
+$$
+p(\text{detect}) = p_0 * I(\text{track in grid})
+$$
+
+where $I$ is the indicator function evaluating to 1 if there exists any track within the grid, and 0 if there does not. 
+
+A Bernoulli trial is applied to each scat, simulating its encounter (and removal). Since dogs appear to be extremely discerning when it comes to detecting scats, I test using a detection probability of 0.8, but any value can be simulated.
+
+### Length model
+
+In future revisions, a scat's detection probability will be determined by the length of track in the grid cell that the scat occupies, in this fashion:
+
+$$
+p(\text{detect}) = p_0 * \sum_{i=1}^{I-1} \text{dist}(x_{i+1},x_i)
+$$
+
+where, $\text{dist}(x_i,x_j)$ is the euclidean distance between points $x_i$ and $x_j$. If there exists no dog track points in the grid cell, the probability of detection is zero. If by chance there is a singular point represented in a grid cell, instead of assigning it an arbitrary distance I will consider it with distance 0, and as such equivalent to no track length within the grid.
+
+## Observation of detection process
+
+### Indicator process
+
+I identify a series of scats that were deposited in the first round and removed in the last for observation. 
+
+
+  ID       x       y  RoundDeposited    pEnc  Removed   RoundRemoved    gridID
+----  ------  ------  ---------------  -----  --------  -------------  -------
+  66   -1.12    0.78  0                  0.8  1         3                  501
+  99    1.44   -0.48  0                  0.8  1         3                  285
+ 157    0.14   -1.22  0                  0.8  1         3                  161
+ 346   -1.07   -0.26  0                  0.8  1         3                  328
+ 419    0.91    0.81  0                  0.8  1         3                  542
+
+
+#### Example: Individual 66
+
+Observe individual 66:
+
+
+                     ID           x           y  RoundDeposited    pEnc  Removed   RoundRemoved    gridID
+------------------  ---  ----------  ----------  ---------------  -----  --------  -------------  -------
+Round 0  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
+Round 1  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
+Round 2  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
+Round 3  Snapshot    66   -1.124147   0.7804769  0                  0.8  1         3                  501
+
+Evidently, the probability of encounter was 0 until the final occasion, meaning that we ought to observe no track until round 3. 
+
+
+
+![](readme_files/ind66.gif)
+
+In the above plot, we do indeed see no track until round 3. 
+
+Another way to look at the data is to see whether -- in any round -- given track in grid, about 80% of those scats should be removed. Let's observe:
+
+
+```r
+# Of those with p(encounter) > 0, how many removed?
+table1 = scatSimOut$ScatRecords$`Round 1` %>% filter(pEnc > 0) %>% {summary(.$Removed)} 
+names(table1) = c("Not Removed", "Removed")
+print(table1)
+```
+
+```
+## Not Removed     Removed 
+##          15          50
+```
+
+We see that 50 individuals of 65 individuals are removed in Round 1: this is approximately 80%, or more specifically, 0.7692308 %.
 
 # Final update notes
 

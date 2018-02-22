@@ -120,7 +120,7 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
 
 simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, probForm = "indicator", p0 = 0.8){
   
-  if(probForm %in% c("indicator", "length", "constant")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
+  if(!probForm %in% c("indicator", "length", "constant")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
   if(p0 < 0 | p0 > 1){stop("p0 must be bounded by 0,1.")}
   
   # function for probForm
@@ -213,9 +213,9 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
       
     }
     
-    scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved))
+    scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved)) %>% mutate(RoundRemoved = factor(RoundRemoved, levels = seq(maxR)))
     
-    if(debug){
+    if(debug){ # This plot displays grid ID's, and points characterized by Removal status, and RoundDeposited.
       print(
         ggplot() +
           geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
