@@ -1,3 +1,7 @@
+Issues 2018-03-02
+
+need to move bbox into simScats.
+
 Repo created 2018-02-17.
 
 The script is intended to verify whether counting scats using a modified Jolly-Seber model is feasible. 

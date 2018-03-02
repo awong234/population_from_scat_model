@@ -42,21 +42,35 @@ convertPoints = function(){
   
 }
 
-getScaledGrid = function(adj.bbox = 100){ # Obtain a scaled grid from the bounding box from a back-scaled allPoints dataset.
+getScaledData = function(transectPoints, adj.bbox = 100, gridSize = 50){ # Obtain a scaled grid from the bounding box from a back-scaled allPoints dataset.
   
-  allPoints_bt = apply(X = allPoints@coords, MARGIN = 1, FUN = function(x){x*scaled_12B2_scale + scaled_12B2_center}) %>% t %>% data.frame
+  scaled_12B2 = transectPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
+  scaled_15A4 = transectPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
+  
+  scaled_12B2_center = attr(x = scaled_12B2, which = 'scaled:center')
+  scaled_12B2_scale = attr(x = scaled_12B2, which = 'scaled:scale')
+  
+  scaled_15A4_center = attr(x = scaled_15A4, which = 'scaled:center')
+  scaled_15A4_scale = attr(x = scaled_15A4, which = 'scaled:scale')
+  
+  transectPoints@coords[transectPoints@data$Site == "12B2"] = scaled_12B2
+  transectPoints@coords[transectPoints@data$Site == "15A4"] = scaled_15A4
+  
+  meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
+  
+  allPoints_bt = apply(X = transectPoints@coords, MARGIN = 1, FUN = function(x){x*scaled_12B2_scale + scaled_12B2_center}) %>% t %>% data.frame
   
   coordinates(allPoints_bt) = ~Easting + Northing
   
-  (bbox = allPoints_bt@bbox)
+  bbox = allPoints_bt@bbox
   
   bbox = bbox + c(rep(-adj.bbox, 2), rep(adj.bbox, 2))
   
-  gridOverlay = expand.grid(seq(bbox[1,1], bbox[1,2], 50), seq(bbox[2,1], bbox[2,2], 50))
+  gridOverlay = expand.grid(seq(bbox[1,1], bbox[1,2], gridSize), seq(bbox[2,1], bbox[2,2], gridSize))
   
-  scaledGrid = gridOverlay %>% scale(center = T, scale = meanScale) %>% as.data.frame %>% rename(Easting = Var1, Northing = Var2)
+  scaledGrid = gridOverlay %>% scale(center = T, scale = meanScale) %>% as.data.frame %>% rename(Easting = Var1, Northing = Var2) %>% mutate(ID = seq(1:nrow(.)))
   
-  return(scaledGrid)
+  return(list(scaledGrid = scaledGrid, scaledTracks = transectPoints))
   
 }
 
@@ -118,7 +132,7 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
   
 }
 
-simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, probForm = "indicator", p0 = 0.8){
+simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, probForm = "indicator", p0 = 0.8){
   
   if(!probForm %in% c("indicator", "length", "constant")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
   if(p0 < 0 | p0 > 1){stop("p0 must be bounded by 0,1.")}
@@ -150,6 +164,8 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
   # 'recruited' scats are generated. Of course, they are independent of the
   # previous set, so it's likely just a matter of a new Poisson distributed population. 
   
+  bbox_scaled = getBbox(gridLayer %>% select(Easting, Northing))
+  
   set.seed(seed)
   
   scatXY = cbind.data.frame(ID = 1:scats_init,
@@ -170,7 +186,7 @@ simScats = function(scats_init = 500, gridLayer, siteToTest = "12B2", recruit_ra
   
   for(r in 1:maxR){
     
-    siteTrackPoints = allPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
+    siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
     
     gridsVisited = countPointsInGrid(queryPoints = siteTrackPoints, gridPoints = gridLayer %>% select(Easting, Northing)) %>% filter(Freq > 0)
     

@@ -11,12 +11,12 @@ library(ggplot2)
 library(dplyr)
 library(foreach)
 library(broom)
+library(tidyr)
+library(rgdal)
 
 source('functions.R')
 
 # Format example dog tracks ------------------------------------------------------------------------------------------------------------
-
-library(rgdal)
 
 # These are the sites that the gpx files are pulled from. Can probably automate in the future if needed. 
 
@@ -122,7 +122,23 @@ ggplot() +
 # 'recruited' scats are generated. Of course, they are independent of the
 # previous set, so it's likely just a matter of a new Poisson distributed population.
 
-scatSim = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+sites = c(rep("12B2",3), rep("15A4", 3))
+
+out = getGPX() #loads gpx files
+
+transPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
+
+scaledData = getScaledData(transectPoints = transPoints)
+
+scaledGrid = scaledData$scaledGrid
+scaledTracks = scaledData$scaledTracks
+
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+
+dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1)
+
+# Mean N per grid per round.
+scatSim$ScatRecords$`Round 3` %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundDeposited = factor(RoundDeposited)) %>% group_by(RoundDeposited, gridID) %>% tally %>% complete(gridID, fill = list(n = 0)) %>% group_by(RoundDeposited) %>% summarize(meanN = mean(n))
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
 

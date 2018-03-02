@@ -17,6 +17,7 @@ library(ggplot2)
 library(dplyr)
 library(foreach)
 library(broom)
+library(tidyr)
 library(rgdal)
 ```
 
