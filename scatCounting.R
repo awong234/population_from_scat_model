@@ -60,9 +60,9 @@ scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, 
 
 bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
 
-ggplot() + 
-  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
-  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
+ggplot() +
+  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
+  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) +
   coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 
 
@@ -128,17 +128,21 @@ out = getGPX() #loads gpx files
 
 transPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
 
-scaledData = getScaledData(transectPoints = transPoints)
+scaledData = getScaledData(transectPoints = transPoints) # Generates scaled track data, and a grid around it
 
 scaledGrid = scaledData$scaledGrid
 scaledTracks = scaledData$scaledTracks
 
 scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
-dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1)
+dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
-# Mean N per grid per round.
+# True mean N per grid per round.
 scatSim$ScatRecords$`Round 3` %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundDeposited = factor(RoundDeposited)) %>% group_by(RoundDeposited, gridID) %>% tally %>% complete(gridID, fill = list(n = 0)) %>% group_by(RoundDeposited) %>% summarize(meanN = mean(n))
 
 # Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
 
+# Format data properly. We need counts at each site (gridID). We need to preserve 0 counts. 
+# We also need sites visited in each round. Don't have this yet.
+
+dataObtained %>% group_by(RoundRemoved, gridID) %>% summarize(count = n())

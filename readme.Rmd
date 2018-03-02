@@ -555,7 +555,16 @@ dataObtained %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundRe
 
 ```
 
-## Statistical model
+The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsend 2011. 
+
+At any given site, the observations are modeled as binomial, with the structure
+
+$$
+n_{it} \sim \text{Bin}(N_{it},p)
+$$
+with $n_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
+
+Where we depart from the models of Dail and Madsen is that we model survival differently. Survival in the simplest structure will be an indicator function evaluating whether the individual was encountered; if so, it is immediately removed from the population. If not, it survives until the next occasion.
 
 
 
