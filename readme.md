@@ -266,7 +266,7 @@ Another way to look at the data is to see whether -- in any round -- given track
 
 ```r
 # Of those with p(encounter) > 0, how many removed?
-table1 = scatSimOut$ScatRecords$`Round 1` %>% filter(pEnc > 0) %>% {summary(.$Removed)} 
+table1 = scatSim$ScatRecords$`Round 1` %>% filter(pEnc > 0) %>% {summary(.$Removed)} 
 names(table1) = c("Not Removed", "Removed")
 print(table1)
 ```
@@ -277,6 +277,33 @@ print(table1)
 ```
 
 We see that 50 individuals of 65 individuals are removed in Round 1: this is approximately 80%, or more specifically, 0.7692308 %.
+
+# Analysis of data
+
+The data obtained are a record of collections per grid, per visit. Below, I randomly sample a few records from each visit to show the counts.
+
+
+```
+## # A tibble: 15 x 3
+## # Groups:   RoundRemoved [3]
+##    RoundRemoved gridID     n
+##          <fctr> <fctr> <int>
+##  1            1    328     1
+##  2            1    222     1
+##  3            1    621     2
+##  4            1    159     1
+##  5            1    317     1
+##  6            2    346     1
+##  7            2    487     1
+##  8            2    566     1
+##  9            2     67     1
+## 10            2    502     1
+## 11            3    569     2
+## 12            3    299     2
+## 13            3    568     1
+## 14            3    501     2
+## 15            3     96     1
+```
 
 # Final update notes
 

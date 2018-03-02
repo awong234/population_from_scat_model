@@ -476,11 +476,11 @@ I identify a series of scats that were deposited in the first round and removed 
 
 ```{r ID_scats}
 
-scatSimOut = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
-ID1 = scatSimOut$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3) %>% pull(ID) #Those scats deposited in initial deposition, and removed in final round. 
+ID1 = scatSim$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3) %>% pull(ID) #Those scats deposited in initial deposition, and removed in final round. 
 
-knitr::kable(scatSimOut$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3), digits = 2)
+knitr::kable(scatSim$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3), digits = 2)
 ```
 
 
@@ -490,7 +490,7 @@ Observe individual 66:
 
 ```{r ID66}
 
-ID66 = bind_rows(scatSimOut$ScatRecords) %>% filter(ID == 66)
+ID66 = bind_rows(scatSim$ScatRecords) %>% filter(ID == 66)
 
 rownames(ID66) = paste("Round", 0:maxR, " Snapshot")
 
@@ -506,7 +506,7 @@ Evidently, the probability of encounter was 0 until the final occasion, meaning 
 
 for(r in 1:3){
   siteTrackPoints = scaledTracks %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
-  scatDat = scatSimOut$ScatRecords[[r+1]] %>% filter(ID == 66)
+  scatDat = scatSim$ScatRecords[[r+1]] %>% filter(ID == 66)
   shapes = c(1,1,4)
   
   labels = c("Available", "Available", "Removed")
@@ -537,12 +537,27 @@ Another way to look at the data is to see whether -- in any round -- given track
 ```{r propRemoved, echo = T}
 
 # Of those with p(encounter) > 0, how many removed?
-table1 = scatSimOut$ScatRecords$`Round 1` %>% filter(pEnc > 0) %>% {summary(.$Removed)} 
+table1 = scatSim$ScatRecords$`Round 1` %>% filter(pEnc > 0) %>% {summary(.$Removed)} 
 names(table1) = c("Not Removed", "Removed")
 print(table1)
 ```
 
 We see that `r table1[2]` individuals of `r sum(table1)` individuals are removed in Round 1: this is approximately 80%, or more specifically, `r table1[2]/sum(table1)` %.
+
+# Analysis of data
+
+The data obtained are a record of collections per grid, per visit. Below, I randomly sample a few records from each visit to show the counts.
+
+```{r scatData}
+dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1)
+
+dataObtained %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundRemoved = factor(RoundRemoved)) %>% group_by(RoundRemoved, gridID) %>% tally %>% group_by(RoundRemoved) %>% sample_n(5) 
+
+```
+
+## Statistical model
+
+
 
 # Final update notes
 
