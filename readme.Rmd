@@ -49,43 +49,43 @@ allPoints = convertPoints() #takes gpx files and converts to a complete dataset 
 
 # Scale individual transect points. Obtain scaling parameters.
 
-scaled_12B2 = allPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
-scaled_15A4 = allPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
-
-scaled_12B2_center = attr(x = scaled_12B2, which = 'scaled:center')
-scaled_12B2_scale = attr(x = scaled_12B2, which = 'scaled:scale')
-
-scaled_15A4_center = attr(x = scaled_15A4, which = 'scaled:center')
-scaled_15A4_scale = attr(x = scaled_15A4, which = 'scaled:scale')
-
-allPoints@coords[allPoints@data$Site == "12B2"] = scaled_12B2
-allPoints@coords[allPoints@data$Site == "15A4"] = scaled_15A4
-
-meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
-
-
-# Assign new coordinates to data frame.
+# scaled_12B2 = allPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
+# scaled_15A4 = allPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
+# 
+# scaled_12B2_center = attr(x = scaled_12B2, which = 'scaled:center')
+# scaled_12B2_scale = attr(x = scaled_12B2, which = 'scaled:scale')
+# 
+# scaled_15A4_center = attr(x = scaled_15A4, which = 'scaled:center')
+# scaled_15A4_scale = attr(x = scaled_15A4, which = 'scaled:scale')
+# 
+# allPoints@coords[allPoints@data$Site == "12B2"] = scaled_12B2
+# allPoints@coords[allPoints@data$Site == "15A4"] = scaled_15A4
+# 
+# meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
 
 xlim = c(-3,3)
 ylim = c(-2,2)
 
 # Generate grid
 
-scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, Northing)
+scaledData = getScaledData(transectPoints = allPoints)
+
+scaledGrid = scaledData$scaledGrid
+scaledTracks = scaledData$scaledTracks
 
 bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
 
-# for(r in 1:3){
+for(r in 1:3){
 # Cairo::Cairo(width = 1920, height = 1080, dpi = 150, file = paste0("path",r,".png"))  
 #   print(
-#     ggplot() + 
-#     geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
-#     geom_path(data = allPoints %>% as.data.frame() %>% filter(Round == r), aes(x = Easting, y = Northing, color = Site, linetype = Round)) + 
-#     guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2)) + 
-#     coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
+    # ggplot() +
+    # geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
+    # geom_path(data = scaledTracks %>% as.data.frame() %>% filter(Round == r), aes(x = Easting, y = Northing, color = Site, linetype = Round)) +
+    # guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2)) +
+    # coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 #   )
 # dev.off()
-# }
+}
 
 ```
 
@@ -176,7 +176,7 @@ scatXY.rec = list(scatXY)
 
 for(r in 1:maxR){
     
-    siteTrackPoints = allPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
+    siteTrackPoints = scaledTracks %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
     
     gridsVisited = countPointsInGrid(queryPoints = siteTrackPoints, gridPoints = gridLayer %>% select(Easting, Northing)) %>% filter(Freq > 0)
     
@@ -417,14 +417,14 @@ Let's look at individual 41. The scat was deposited in round 0, but wasn't remov
 ```{r, eval = F}
 
 for(r in 1:3){
-  siteTrackPoints = allPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
+  siteTrackPoints = scaledTracks %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
   scatDat = scatXY.rec[[r+1]] %>% filter(ID == 41)
   shapes = c(1,4,4)
   
   labels = c("Available", "Removed", "Removed")
 
-Cairo::Cairo(width = 1920, height = 1080, file = paste0('indScatPlot',r,'.png'), dpi = 150)
-print(
+# Cairo::Cairo(width = 1920, height = 1080, file = paste0('indScatPlot',r,'.png'), dpi = 150)
+# print(
   ggplot() +
   geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
   # geom_text(data = gridLayer, aes(x = Easting, y = Northing, label = ID)) +
@@ -433,8 +433,8 @@ print(
   scale_shape_manual(values = shapes[r]) +
   geom_text(aes(x = 1, y = -0.3), label = paste0("Round ", r, ": ", labels[r]))
   
-)
-dev.off()
+# )
+# dev.off()
 
 }
 
@@ -476,7 +476,7 @@ I identify a series of scats that were deposited in the first round and removed 
 
 ```{r ID_scats}
 
-scatSimOut = simScats(gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+scatSimOut = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
 ID1 = scatSimOut$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3) %>% pull(ID) #Those scats deposited in initial deposition, and removed in final round. 
 
@@ -505,7 +505,7 @@ Evidently, the probability of encounter was 0 until the final occasion, meaning 
 # observe ind 66
 
 for(r in 1:3){
-  siteTrackPoints = allPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
+  siteTrackPoints = scaledTracks %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
   scatDat = scatSimOut$ScatRecords[[r+1]] %>% filter(ID == 66)
   shapes = c(1,1,4)
   
