@@ -155,6 +155,7 @@ gridsVisited = scatSim$GridVisitsRecords %>% bind_rows %>% pull(ID) %>% unique %
 
 # Which grids among the total were visited, per round? 
 vis = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){gridsVisited %in% x$ID}) %>% do.call(what = cbind, args = .) %>% cbind(F, .)
+vis = vis*1 # Convert to integer
 rownames(vis) = as.character(gridsVisited)
 
 # Indexed.
@@ -173,15 +174,26 @@ maxT = maxR + 1
 # Format data properly. We need counts at each site (gridID). We need to preserve 0 counts. 
 # We also need sites visited in each round.
 
-counts = list()
 
-for(r in 1:length(scatSim$GridVisitsRecords)){
+
+getCounts <- function() { # quick, no need for formal arguments, just avoiding side-effects.
   
-  gridsVisited = scatSim$GridVisitsRecords[[r]]
+  counts = list()
+
+  for(r in 1:length(scatSim$GridVisitsRecords)){
+    
+    gridsVisited = scatSim$GridVisitsRecords[[r]]
+    
+    counts[[r]] = dataObtained %>% filter(RoundRemoved == r) %>% mutate(gridID = factor(gridID, levels = gridsVisited$ID)) %>% group_by(gridID) %>% 
+      summarize(count = n()) %>% complete(gridID, fill = list(count = 0))
+    
+  }
   
-  counts[[r]] = dataObtained %>% filter(RoundRemoved == r) %>% mutate(gridID = factor(gridID, levels = gridsVisited$ID)) %>% group_by(gridID) %>% summarize(count = n()) %>% complete(gridID, fill = list(count = 0))
+  return(counts)
   
 }
+
+counts = getCounts()
 
 counts_long = bind_rows(counts) %>% mutate(Round = rep(1:length(counts), sapply(X = counts, FUN = function(x){nrow(x)}))) %>% mutate(gridID = as.integer(gridID))
 
@@ -211,6 +223,11 @@ counts_wide = cbind('gridID' = counts_wide$gridID, `0` = NA, counts_wide[,2:4])
 # NA's don't go into jags though, that's what `vis` is for; to indicate which sites were visited. y will be counts only.
 y = counts_wide[,2:5]
 y[is.na(y)] = 0
+
+
+# True N per round
+scatSim$ScatRecords$`Round 3` %>% filter(gridID %in% gridsVisited) %>% nrow
+
 
 # From here on out, a grid cell is a site. 
 
@@ -255,12 +272,14 @@ y[is.na(y)] = 0
 # # # Jags input # # # 
 
 inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSites, ncol = maxR)), 
-                        R = cbind(rep(NA,nSites), matrix(data = 20, nrow = nSites, ncol = maxR)),
-                        N1 = vector(mode = 'integer', length = nSites))}
+                        R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
+                        N1 = rowSums(y))}
 
-data = list(y = y, vis = vis)
+data = list(y = y, vis = vis, nSites = nSites, maxT = maxT)
 
-autoja
+params = c("N_time", "N_tot", "p00", "theta", "R", "lambda")
 
+jagsOut = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', iter.increment = 1000, n.chains = 4, save.all.iter = T, Rhat.limit = 1.1, max.iter = 5e4, parallel = T)
 
+jagsOut
 

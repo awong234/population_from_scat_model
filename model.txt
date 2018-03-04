@@ -1,16 +1,16 @@
 model
 {
     # Priors
-    p0 ~ dunif(0,1)
+    p00 ~ dunif(0,1)
     theta ~ dunif(0,100)
     beta0 ~ dnorm(0,0.01) #prior for lambda
 
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
+    lambda = exp(beta0)    
 
-    for(i in 1:nsites){
+    for(i in 1:nSites){
 
-        # Need model for N's
-        lambda = exp(beta0)
+        # Need model for N's       
         
         # First N (in time 0) is Poisson random
         N1[i] ~ dpois(lambda) 
@@ -22,21 +22,36 @@ model
         # First detection in time 0 is 0 (we didn't visit any sites in initial deposition).
         p0[i,1] = 0
 
-        # Proceeding N's are a sum of the recruits and the removal of the counts.
+        # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.
+        # Remember that y[i,3] is the SECOND visit, so it makes sense that N3 should be dependent upon what was found in the previous visit.
         for(t in 2:maxT){
             R[i,t] ~ dpois(theta)
             N[i,t] = N[i,t-1] + R[i,t] - y[i,t]
         }
         
         # Observation likelihood. Counts are conditional on population size at previous time step, and detection (which also depends on having visited the site).
-        for(t in 2:maxT){                    
-            y[i,t] ~ dbinom(N[i,t-1],p0[i,t])
+        for(t in 2:maxT){ 
+
+            p0[i,t] = p00
+
+            # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8            
+            pv[i,t] = p0[i,t] * vis[i,t]  
+
+            y[i,t] ~ dbin(pv[i,t],N[i,t-1])
+
+            
         }        
+       
 
     }
 
+    for(t in 1:maxT){
+            N_time[t] = sum(N[,t])
+        }
+
     
+    N_tot = sum(N_time[])
 
 
 }
