@@ -7,16 +7,24 @@
 # 3. Model scat encounters as a modified spatial Jolly-Seber model.
 # 3a. Need to implement a per-capita recruitment rate, as data augmentation implies a varying recruitment rate. 
 
-library(ggplot2)
+# Setup --------------------------------------------------------------------------------------------------------------------------------------------
+
+# Required
 library(dplyr)
 library(foreach)
-library(broom)
 library(tidyr)
 library(rgdal)
+library(reshape2)
+library(jagsUI)
+
+# Optional 
+
+library(ggplot2)
+library(viridis)
 
 source('functions.R')
 
-# Format example dog tracks ------------------------------------------------------------------------------------------------------------
+# DEPRECATED Format example dog tracks ------------------------------------------------------------------------------------------------------------
 
 # These are the sites that the gpx files are pulled from. Can probably automate in the future if needed. 
 
@@ -66,7 +74,7 @@ ggplot() +
   coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 
 
-# Simulation of scats & state space ----------------------------------------------------------------------------------------------------
+# DEPRECATED Simulation of scats & state space ----------------------------------------------------------------------------------------------------
 
 # Example follows. Dedicated function has been created.
 
@@ -140,9 +148,119 @@ dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These ar
 # True mean N per grid per round.
 scatSim$ScatRecords$`Round 3` %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundDeposited = factor(RoundDeposited)) %>% group_by(RoundDeposited, gridID) %>% tally %>% complete(gridID, fill = list(n = 0)) %>% group_by(RoundDeposited) %>% summarize(meanN = mean(n))
 
-# Analyze encounters using JAGS ------------------------------------------------------------------------------------------------------------
+# Format Data ------------------------------------------------------------------------------------------------------------
+
+# All grids ever visited.
+gridsVisited = scatSim$GridVisitsRecords %>% bind_rows %>% pull(ID) %>% unique %>% sort
+
+# Which grids among the total were visited, per round? 
+vis = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){gridsVisited %in% x$ID}) %>% do.call(what = cbind, args = .) %>% cbind(F, .)
+rownames(vis) = as.character(gridsVisited)
+
+# Indexed.
+gridsIndex = as.integer(gridsVisited %>% as.factor)
+names(gridsIndex) = as.character(gridsVisited)
+
+# Number of sites ever visited.
+nSites = length(gridsIndex)
+
+# Number of VISITS
+maxR = 3
+
+# Number of occasions INCLUDING original deposition
+maxT = maxR + 1
 
 # Format data properly. We need counts at each site (gridID). We need to preserve 0 counts. 
-# We also need sites visited in each round. Don't have this yet.
+# We also need sites visited in each round.
 
-dataObtained %>% group_by(RoundRemoved, gridID) %>% summarize(count = n())
+counts = list()
+
+for(r in 1:length(scatSim$GridVisitsRecords)){
+  
+  gridsVisited = scatSim$GridVisitsRecords[[r]]
+  
+  counts[[r]] = dataObtained %>% filter(RoundRemoved == r) %>% mutate(gridID = factor(gridID, levels = gridsVisited$ID)) %>% group_by(gridID) %>% summarize(count = n()) %>% complete(gridID, fill = list(count = 0))
+  
+}
+
+counts_long = bind_rows(counts) %>% mutate(Round = rep(1:length(counts), sapply(X = counts, FUN = function(x){nrow(x)}))) %>% mutate(gridID = as.integer(gridID))
+
+# Check to see visits are right. They are.
+
+counts_xy = lapply(counts, FUN = function(x){x %>% left_join(scaledGrid %>% mutate(ID = factor(ID)), by = c("gridID" = "ID"))}) # Obtain grid centers in data
+
+for(r in 1:3){
+  print(
+  
+  ggplot() + 
+    geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
+    geom_tile(data = counts_xy[[r]], aes(x = Easting, y = Northing, fill = factor(count))) + 
+    geom_text(data = scaledGrid, aes(x = Easting, y = Northing, label = ID), size = 3) + 
+    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == r), aes(x = Easting, y = Northing)) + 
+    geom_point(data = dataObtained %>% filter(RoundRemoved == r), aes(x = x, y = y), color = 'red') + 
+    scale_fill_viridis(discrete = T) + 
+    ggtitle(paste0("Round ", r))
+    
+  )
+}
+
+# NA's show when sites not visited
+counts_wide = spread(counts_long, key = Round, value = count) %>% arrange(gridID)
+counts_wide = cbind('gridID' = counts_wide$gridID, `0` = NA, counts_wide[,2:4])
+
+# NA's don't go into jags though, that's what `vis` is for; to indicate which sites were visited. y will be counts only.
+y = counts_wide[,2:5]
+y[is.na(y)] = 0
+
+# From here on out, a grid cell is a site. 
+
+# Need a [site,time] matrix of counts. 
+# nsites is the population of sites visited. 
+# NEED all sites possibly observed because N[i,t] must be updated each round. If we never visited a site until the third round, the deposition must be modeled. 
+# Counts cannot simply be 0 at those sites we didn't visit. Therefore, must constrain p = 0 at those sites. 
+# Need an index of sites visited, and a matrix p0[i,t] {0, if not visited; p0 if visited}.
+
+# maxT = 4; Round 0 : 3. 
+
+# JAGS preparation ----------------------------------------------------------------------------------------------------------------
+
+# Need to initialize the following:
+
+# N1[i] ; initial deposition at sites visited.
+# N[i,t] ; population following t = 1, from 2 to 4.
+# R[i,t] ; recruitment following t = 1. R[i,1] = 0.
+# p0[i,t] ; detection probability at site i, time t. p0[i,1] = 0. All other p0[i,2:maxT] = 0.8.
+
+# NOTE: See section 2.3.1 in jags manual, must set p0[i,1] = R[i,1] = NA.
+
+# Need to supply the following as data:
+
+# counts y[i,t], with the first column being 0's.
+# visits vis[i,t], with the first column being 0's. 
+
+# Want to track the following parameters:
+
+# N_time
+# N_tot
+# pv
+# theta
+# R
+# lambda
+
+
+
+# Format counts
+
+
+# # # Jags input # # # 
+
+inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSites, ncol = maxR)), 
+                        R = cbind(rep(NA,nSites), matrix(data = 20, nrow = nSites, ncol = maxR)),
+                        N1 = vector(mode = 'integer', length = nSites))}
+
+data = list(y = y, vis = vis)
+
+autoja
+
+
+
