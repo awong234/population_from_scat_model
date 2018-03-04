@@ -184,6 +184,8 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
   
   scatXY.rec = list(scatXY)
   
+  gridsVisited.rec = list()
+  
   for(r in 1:maxR){
     
     siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
@@ -191,6 +193,8 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
     gridsVisited = countPointsInGrid(queryPoints = siteTrackPoints, gridPoints = gridLayer %>% select(Easting, Northing)) %>% filter(Freq > 0)
     
     gridsVisitedID = cbind(x = gridX[gridsVisited$x], y = gridY[gridsVisited$y]) %>% as.data.frame %>% left_join(y = gridLayer, by = c("x" = "Easting", "y" = "Northing"))
+    
+    gridsVisited.rec[[r]] = gridsVisitedID
     
     scatsAvail = scatXY %>% filter(Removed == 0, gridID %in% gridsVisitedID$ID)
     
@@ -229,7 +233,7 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
       
     }
     
-    scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved)) %>% mutate(RoundRemoved = factor(RoundRemoved, levels = seq(maxR)))
+    scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved)) %>% mutate(RoundRemoved = factor(RoundRemoved, levels = c(NA,seq(maxR))))
     
     if(debug){ # This plot displays grid ID's, and points characterized by Removal status, and RoundDeposited.
       print(
@@ -297,7 +301,7 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
   names(scatXY.rec) = paste("Round", 0:maxR)
   names(depositionLog) = paste("Round", 0:(maxR-1)) 
   
-  toReturn = list("ScatRecords" = scatXY.rec, "DepositionRecords" = depositionLog)
+  toReturn = list("ScatRecords" = scatXY.rec, "DepositionRecords" = depositionLog, "GridVisitsRecords" = gridsVisited.rec)
   
   return(toReturn)
   
