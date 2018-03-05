@@ -11,7 +11,7 @@ The major components of this simulation are as follows:
 
 * Simulate a population of scats with a rate of deposition, to estimate the population based on simulated collections.
 * Simulate collection of scats by probabilistically drawing Bernoulli samples based upon dog tracks within the grid cell coincident with the scat.
-* Estimate scat deposition rate per visit using a modified spatial Jolly-Seber model that incorporates scat 'recruitment' and 'survival', where 'recruitment' is a rate of deposition, and 'survival' is fixed to 0, since all scats encountered are immediately removed.
+* Estimate scat deposition rate per visit using a modified N-mixture model that incorporates scat 'recruitment' and 'survival', where 'recruitment' is a rate of deposition, and 'survival' is fixed to 0, since all scats encountered are immediately removed.
 
 # Simulating the data
 
@@ -72,123 +72,18 @@ Those scats are changing their status from 'not removed', to 'removed', demonstr
 The simulated dataset is obtained by filtering out only those scats that were removed (since we would not have information about those not removed), as below:
 
 
-
-<table>
- <thead>
-  <tr>
-   <th style="text-align:center;"> ID </th>
-   <th style="text-align:center;"> x </th>
-   <th style="text-align:center;"> y </th>
-   <th style="text-align:center;"> RoundDeposited </th>
-   <th style="text-align:center;"> pEnc </th>
-   <th style="text-align:center;"> Removed </th>
-   <th style="text-align:center;"> RoundRemoved </th>
-   <th style="text-align:center;"> gridID </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:center;"> 7 </td>
-   <td style="text-align:center;"> 2.07 </td>
-   <td style="text-align:center;"> -0.39 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 317 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 16 </td>
-   <td style="text-align:center;"> -0.01 </td>
-   <td style="text-align:center;"> -1.24 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 160 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 20 </td>
-   <td style="text-align:center;"> 1.29 </td>
-   <td style="text-align:center;"> 0.55 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 487 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 37 </td>
-   <td style="text-align:center;"> 1.37 </td>
-   <td style="text-align:center;"> -0.52 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 284 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 41 </td>
-   <td style="text-align:center;"> 1.49 </td>
-   <td style="text-align:center;"> -0.41 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 2 </td>
-   <td style="text-align:center;"> 314 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 43 </td>
-   <td style="text-align:center;"> 1.31 </td>
-   <td style="text-align:center;"> 0.61 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 487 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 45 </td>
-   <td style="text-align:center;"> 0.14 </td>
-   <td style="text-align:center;"> -1.20 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 161 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 50 </td>
-   <td style="text-align:center;"> 0.90 </td>
-   <td style="text-align:center;"> 0.93 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 542 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 57 </td>
-   <td style="text-align:center;"> -0.85 </td>
-   <td style="text-align:center;"> -1.61 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 68 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 60 </td>
-   <td style="text-align:center;"> -0.43 </td>
-   <td style="text-align:center;"> 1.31 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 621 </td>
-  </tr>
-</tbody>
-</table>
+ ID      x        y      RoundDeposited    pEnc    Removed    RoundRemoved    gridID 
+----  -------  -------  ----------------  ------  ---------  --------------  --------
+ 7     2.07     -0.39          0            1         1            1           317   
+ 16    -0.01    -1.24          0            1         1            1           160   
+ 20    1.29     0.55           0            1         1            1           487   
+ 37    1.37     -0.52          0            1         1            1           284   
+ 41    1.49     -0.41          0            1         1            2           314   
+ 43    1.31     0.61           0            1         1            1           487   
+ 45    0.14     -1.20          0            1         1            1           161   
+ 50    0.90     0.93           0            1         1            1           542   
+ 57    -0.85    -1.61          0            1         1            1            68   
+ 60    -0.43    1.31           0            1         1            1           621   
 
 <br />
 
@@ -246,12 +141,12 @@ I identify a series of scats that were deposited in the first round and removed 
 Observe individual 66:
 
 
-                     ID           x           y  RoundDeposited    pEnc  Removed   RoundRemoved    gridID
-------------------  ---  ----------  ----------  ---------------  -----  --------  -------------  -------
-Round 0  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
-Round 1  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
-Round 2  Snapshot    66   -1.124147   0.7804769  0                  0.0  0         NA                 501
-Round 3  Snapshot    66   -1.124147   0.7804769  0                  0.8  1         3                  501
+                     ID       x      y  RoundDeposited    pEnc  Removed   RoundRemoved    gridID
+------------------  ---  ------  -----  ---------------  -----  --------  -------------  -------
+Round 0  Snapshot    66   -1.12   0.78  0                  0.0  0         NA                 501
+Round 1  Snapshot    66   -1.12   0.78  0                  0.0  0         NA                 501
+Round 2  Snapshot    66   -1.12   0.78  0                  0.0  0         NA                 501
+Round 3  Snapshot    66   -1.12   0.78  0                  0.8  1         3                  501
 
 Evidently, the probability of encounter was 0 until the final occasion, meaning that we ought to observe no track until round 3. 
 
@@ -272,11 +167,11 @@ print(table1)
 ```
 
 ```
-## Not Removed     Removed 
-##          15          50
+Not Removed     Removed 
+         15          50 
 ```
 
-We see that 50 individuals of 65 individuals are removed in Round 1: this is approximately 80%, or more specifically, 0.7692308 %.
+We see that 50 individuals of 65 individuals are removed in Round 1: this is approximately 80%, or more specifically, 0.769 %.
 
 # Data structure
 
@@ -305,7 +200,7 @@ The data obtained are a record of collections per grid, per visit. Below, I rand
 15            3     96     1
 ```
 
-Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above.
+Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above. The data are then spread into wide format using the `spread()` function from `tidyr`.
 
 
 ```
@@ -339,6 +234,45 @@ In the above dataset, I've truncated the first 20 rows for visibility. NA's exis
 
 ![](readme_files/scatCounts.gif)
 
+To prepare these data for the JAGS analysis, the NA's in the count dataset are converted to 0's, and a separate matrix is formed that is binary with 1's indicating a visited site, and 0's indicating a non-visited site, of the same dimension as the wide data. For instance, that indicator matrix appears as follows:
+
+
+```
+    F      
+67  0 1 1 1
+68  0 1 1 1
+96  0 1 1 1
+97  0 1 1 1
+98  0 1 1 1
+99  0 1 1 1
+125 0 1 1 1
+126 0 1 1 0
+128 0 1 1 1
+129 0 1 1 1
+130 0 1 1 1
+154 0 1 1 1
+159 0 1 1 1
+160 0 1 1 1
+161 0 1 1 1
+162 0 1 0 0
+183 0 1 1 1
+189 0 0 1 0
+190 0 1 1 1
+191 0 1 1 1
+192 0 1 1 1
+193 0 1 0 0
+212 0 1 1 1
+221 0 1 1 1
+222 0 1 1 1
+223 0 1 1 1
+224 0 1 0 0
+241 0 1 1 1
+252 0 1 1 1
+253 0 1 1 1
+```
+
+Again, the data are truncated for visibility. 
+
 # Model Definition
 
 The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsen 2011. 
@@ -346,13 +280,13 @@ The general idea here is that we have repeated counts of a population of individ
 At any given site, the observations are modeled as binomial, with the structure
 
 $$
-n_{it} \sim \text{Bin}(N_{it},p)
+y_{it} \sim \text{Bin}(N_{it},p)
 $$
-with $n_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
+with $y_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
 
-Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; therefore we have perfect knowledge of 'survival'. We retain the basic Poisson structure for recruitment, and I relabel this $R$.
+Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; analogous to perfect knowledge of 'survival'. However, we retain the basic Poisson structure for recruitment, and I relabel this $R$.
 
-In our model here, I choose to simulate the process as follows:
+In our model here, I choose to analyze the process as follows:
 
 |          |      Round 0    |      Round 1     |     Round 2     |     Round 3     |
 | -------- | :--------------:| :-------------:  | :-------------: | :-------------: |
@@ -372,33 +306,119 @@ The parameters to estimate are thus $\lambda$, $\theta$, and $p_{it}$. I model $
 
 # Truth data 
 
-I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are 754 total grid cells, and we sample a total of 101 cells. The population size among the grid cells we visit in total is as follows:
+I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are 754 total grid cells, and we sample a total of 101 cells; that is a proportion of 0.134. The population size among the grid cells we visit in total is as follows:
 
 
 ```
-## [1] 146
+[1] 146
 ```
 
 In each round, the population size available to be sampled is:
 
 
 ```
-## Round 0 Round 1 Round 2 Round 3 
-##       0      65      50      48
+Round 0 Round 1 Round 2 Round 3 
+      0      65      50      48 
 ```
+These numbers are drawn from the full simulated dataset conditional on whether the grids were visited, and the scats were not removed yet. The interpretation is, for example "In Round 1, 65 scats were left over from Round 0, and were available for encounter". Again, the population 'left over' is the sum of the population available to be sampled, plus the recruits, minus the observed individuals. Note that since Round 0 is the initial deposition period, there is no recruitment between then and the first visit, since we assume whatever happened prior to our first visit is subsumed in the model for $N_{i0}$.
 
 We made the following observations:
 
 
 ```
-##  0  1  2  3 
-##  0 50 35 44
+Round 0 Round 1 Round 2 Round 3 
+      0      50      35      44 
 ```
 
-Our observations thus form approximately 0.8835616% of the scats available to be observed, which is how we simulated the process.
+Per round, the proportions taken are:
 
-# Update notes
 
-Analyzing this dataset in JAGS under the model specified (located as 'model.txt') provides errant estimates of the parameters, often despite convergence. 
+```
+Round 0 Round 1 Round 2 Round 3 
+    NaN   0.769   0.700   0.917 
+```
+
+with mean approximately 79.53%. Note that the sum of these time-specific available population sizes is NOT the total population size, due to unobserved individuals carried between sessions. 
+
+Our observations thus form approximately 88.356% of the scats available to be observed, which is how we simulated the process.
+
+The recruitment rate $\theta$ was approximately 0.292.
+
+The initial expected population size per grid $\lambda$ was approximately 0.663.
+
+# Analysis in JAGS
+
+The data were input into JAGS under the model defined as 'model.txt' in the parent directory of this repository. One million iterations were run with four chains, and half of these were discarded as burn-in. I selected one million iterations due to the results observed experimenting with smaller iteration sizes; often, the estimates of N were overestimated by periodic sampling of the parameters $\lambda$ and $\theta$ in extremes of the state space. When 50,000 iterations proved too small, I selected one million since the analysis time is relatively short.
+
+To keep the dimensions of the visited sites constant, I used an indicator variable `vis[i,t]` multiplied against $p_0$ to fix the probability of encounter at unvisited sites to 0. 
+
+The initializer function provided appears as follows:
+
+
+```r
+inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSites, ncol = maxR)), 
+                        R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
+                        N1 = rowSums(y))}
+```
+
+I initialized p0 to be the correct value, R to be relatively small, and most importantly, I initialized the first population size at all sites to be the `rowSums` of $y_{it}$. For there to be no conflicting parent values, the starting population must be *at least* as large as the observed counts, and we certainly cannot have an initial value of 0 where we have non-zero observations. 
+
+Since we fix the first column (time 0, or initial deposition period) of $p_0$ and $R$ to be 0 within the model script, those retain NA values in the initializing function.  
+
+## Analysis summary
+
+A summary of the analysis follows:
+
+
+```
+Loading required package: lattice
+```
+
+```
+
+Attaching package: 'jagsUI'
+```
+
+```
+The following object is masked from 'package:utils':
+
+    View
+```
+
+```
+JAGS output for model 'model.txt', generated by jagsUI.
+Estimates based on 4 chains of 1e+06 iterations,
+burn-in = 5e+05 iterations and thin rate = 1,
+yielding 2e+06 total samples from the joint posterior. 
+MCMC ran in parallel for 24.4 minutes at time 2018-03-05 11:45:24.
+
+             mean     sd   2.5%     50%   97.5% overlap0 f Rhat n.eff
+N_time[1]  74.897 28.161 55.000  66.000 142.000    FALSE 1 1.08   100
+N_time[2]  62.413 28.591 42.000  54.000 129.000    FALSE 1 1.08    99
+N_time[3]  73.732 27.994 52.000  66.000 138.000    FALSE 1 1.08   107
+N_time[4]  72.151 30.320 41.000  66.000 141.000    FALSE 1 1.06   131
+p00         0.798  0.171  0.385   0.846   0.995    FALSE 1 1.05    76
+theta       0.420  0.068  0.294   0.418   0.554    FALSE 1 1.00 13829
+lambda      0.742  0.292  0.467   0.672   1.426    FALSE 1 1.07   109
+deviance  130.744 91.029  2.363 114.169 335.528    FALSE 1 1.04    77
+
+Successful convergence based on Rhat values (all < 1.1). 
+Rhat is the potential scale reduction factor (at convergence, Rhat=1). 
+For each parameter, n.eff is a crude measure of effective sample size. 
+
+overlap0 checks if 0 falls in the parameter's 95% credible interval.
+f is the proportion of the posterior with the same sign as the mean;
+i.e., our confidence that the parameter is positive or negative.
+
+DIC info: (pD = var(deviance)/2) 
+pD = 3980 and DIC = 4110 
+DIC is an estimate of expected predictive error (lower is better).
+```
+
+Observe that all of the estimates are within coverage except for `N_time[3]`, and `theta`. 
+
+Also note that `N_time[1]` refers to $N_0$, and `N_time[4]` would refer to $N_3$, the population size resulting after recruitment and sampling on the third occasion. This number is of no importance to us, since we did not sample a fourth occasion. 
+
+The model appears to be running, albeit with some biased estimates. I expect that perhaps this may be due to relatively small sample size per grid cell, or perhaps a random outcome of the simulation. More simulations should be done to validate this model.
 
 ### Footnotes

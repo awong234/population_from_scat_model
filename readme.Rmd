@@ -2,14 +2,14 @@
 title: "Scat Counting Simulation"
 author: "Alec Wong"
 date: "February 19, 2018"
-output: 
+output:
   html_document:
-    keep_md: true
+    keep_md: yes
 ---
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(echo = F, comment = NULL)
 
 source('functions.R')
 
@@ -19,6 +19,8 @@ library(foreach)
 library(broom)
 library(tidyr)
 library(rgdal)
+
+options(digits = 3)
 ```
 
 # Overview
@@ -27,7 +29,7 @@ The major components of this simulation are as follows:
 
 * Simulate a population of scats with a rate of deposition, to estimate the population based on simulated collections.
 * Simulate collection of scats by probabilistically drawing Bernoulli samples based upon dog tracks within the grid cell coincident with the scat.
-* Estimate scat deposition rate per visit using a modified spatial Jolly-Seber model that incorporates scat 'recruitment' and 'survival', where 'recruitment' is a rate of deposition, and 'survival' is fixed to 0, since all scats encountered are immediately removed.
+* Estimate scat deposition rate per visit using a modified N-mixture model that incorporates scat 'recruitment' and 'survival', where 'recruitment' is a rate of deposition, and 'survival' is fixed to 0, since all scats encountered are immediately removed.
 
 # Simulating the data
 
@@ -286,128 +288,11 @@ Those scats are changing their status from 'not removed', to 'removed', demonstr
 
 The simulated dataset is obtained by filtering out only those scats that were removed (since we would not have information about those not removed), as below:
 
-```{r, eval = F}
+```{r, eval = T}
 
-knitr::kable(x = scatXY.rec[[3]] %>% filter(Removed == 1)%>% slice(1:10), format = 'html', align = 'cccccccc', digits = 2) 
+knitr::kable(x = scatXY.rec[[3]] %>% filter(Removed == 1)%>% slice(1:10), align = 'cccccccc', digits = 2) 
 
 ```
-
-<table>
- <thead>
-  <tr>
-   <th style="text-align:center;"> ID </th>
-   <th style="text-align:center;"> x </th>
-   <th style="text-align:center;"> y </th>
-   <th style="text-align:center;"> RoundDeposited </th>
-   <th style="text-align:center;"> pEnc </th>
-   <th style="text-align:center;"> Removed </th>
-   <th style="text-align:center;"> RoundRemoved </th>
-   <th style="text-align:center;"> gridID </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:center;"> 7 </td>
-   <td style="text-align:center;"> 2.07 </td>
-   <td style="text-align:center;"> -0.39 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 317 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 16 </td>
-   <td style="text-align:center;"> -0.01 </td>
-   <td style="text-align:center;"> -1.24 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 160 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 20 </td>
-   <td style="text-align:center;"> 1.29 </td>
-   <td style="text-align:center;"> 0.55 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 487 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 37 </td>
-   <td style="text-align:center;"> 1.37 </td>
-   <td style="text-align:center;"> -0.52 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 284 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 41 </td>
-   <td style="text-align:center;"> 1.49 </td>
-   <td style="text-align:center;"> -0.41 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 2 </td>
-   <td style="text-align:center;"> 314 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 43 </td>
-   <td style="text-align:center;"> 1.31 </td>
-   <td style="text-align:center;"> 0.61 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 487 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 45 </td>
-   <td style="text-align:center;"> 0.14 </td>
-   <td style="text-align:center;"> -1.20 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 161 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 50 </td>
-   <td style="text-align:center;"> 0.90 </td>
-   <td style="text-align:center;"> 0.93 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 542 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 57 </td>
-   <td style="text-align:center;"> -0.85 </td>
-   <td style="text-align:center;"> -1.61 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 68 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> 60 </td>
-   <td style="text-align:center;"> -0.43 </td>
-   <td style="text-align:center;"> 1.31 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 1 </td>
-   <td style="text-align:center;"> 621 </td>
-  </tr>
-</tbody>
-</table>
 
 <br />
 
@@ -476,7 +361,9 @@ I identify a series of scats that were deposited in the first round and removed 
 
 ```{r ID_scats}
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+recruit_rate = 200
+
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
 ID1 = scatSim$ScatRecords$`Round 3` %>% filter(RoundDeposited == 0, RoundRemoved == 3) %>% pull(ID) #Those scats deposited in initial deposition, and removed in final round. 
 
@@ -555,7 +442,7 @@ dataObtained %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundRe
 
 ```
 
-Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above.
+Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above. The data are then spread into wide format using the `spread()` function from `tidyr`.
 
 ```{r, scatDataWide, comment = NULL, warning=FALSE}
 # All grids ever visited.
@@ -624,6 +511,16 @@ In the above dataset, I've truncated the first 20 rows for visibility. NA's exis
 
 ![](readme_files/scatCounts.gif)
 
+To prepare these data for the JAGS analysis, the NA's in the count dataset are converted to 0's, and a separate matrix is formed that is binary with 1's indicating a visited site, and 0's indicating a non-visited site, of the same dimension as the wide data. For instance, that indicator matrix appears as follows:
+
+```{r, vis}
+
+vis[1:30,]
+
+```
+
+Again, the data are truncated for visibility. 
+
 # Model Definition
 
 The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsen 2011. 
@@ -631,13 +528,13 @@ The general idea here is that we have repeated counts of a population of individ
 At any given site, the observations are modeled as binomial, with the structure
 
 $$
-n_{it} \sim \text{Bin}(N_{it},p)
+y_{it} \sim \text{Bin}(N_{it},p)
 $$
-with $n_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
+with $y_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
 
-Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; therefore we have perfect knowledge of 'survival'. We retain the basic Poisson structure for recruitment, and I relabel this $R$.
+Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; analogous to perfect knowledge of 'survival'. However, we retain the basic Poisson structure for recruitment, and I relabel this $R$.
 
-In our model here, I choose to simulate the process as follows:
+In our model here, I choose to analyze the process as follows:
 
 |          |      Round 0    |      Round 1     |     Round 2     |     Round 3     |
 | -------- | :--------------:| :-------------:  | :-------------: | :-------------: |
@@ -657,7 +554,7 @@ The parameters to estimate are thus $\lambda$, $\theta$, and $p_{it}$. I model $
 
 # Truth data 
 
-I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are `r nrow(scaledGrid)` total grid cells, and we sample a total of `r gridsVisited %>% length` cells. The population size among the grid cells we visit in total is as follows:
+I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are `r nrow(scaledGrid)` total grid cells, and we sample a total of `r gridsVisited %>% length` cells; that is a proportion of `r (gridsVisited %>% length)/nrow(scaledGrid)`. The population size among the grid cells we visit in total is as follows:
 
 ```{r, trueN}
 scatSim$ScatRecords$`Round 3` %>% filter(gridID %in% gridsVisited) %>% nrow
@@ -681,6 +578,7 @@ names(popAvail) = paste("Round", 0:3)
 
 print(popAvail)
 ```
+These numbers are drawn from the full simulated dataset conditional on whether the grids were visited, and the scats were not removed yet. The interpretation is, for example "In Round 1, 65 scats were left over from Round 0, and were available for encounter". Again, the population 'left over' is the sum of the population available to be sampled, plus the recruits, minus the observed individuals. Note that since Round 0 is the initial deposition period, there is no recruitment between then and the first visit, since we assume whatever happened prior to our first visit is subsumed in the model for $N_{i0}$.
 
 We made the following observations:
 
@@ -696,12 +594,46 @@ Per round, the proportions taken are:
 (countSums/popAvail)
 ```
 
-with mean approximately `r ((countSums/popAvail) %>% mean(na.rm = T))*100`%. Notice that the sum of these time-specific available population sizes is NOT the total population size, due to individuals carried between sessions. 
+with mean approximately `r ((countSums/popAvail) %>% mean(na.rm = T))*100`%. Note that the sum of these time-specific available population sizes is NOT the total population size, due to unobserved individuals carried between sessions. 
 
 Our observations thus form approximately `r (colSums(counts_wide, na.rm=T)[2:5] %>% sum /  scatSim$ScatRecords[[3]] %>% filter(gridID %in% gridsVisited) %>% nrow)*100`% of the scats available to be observed, which is how we simulated the process.
 
-# Update notes
+The recruitment rate $\theta$ was approximately `r scatSim$DepositionRecords[2]/nrow(scaledGrid)`.
 
-Analyzing this dataset in JAGS under the model specified (located as 'model.txt') provides errant estimates of the parameters, often despite convergence. 
+The initial expected population size per grid $\lambda$ was approximately `r scatSim$DepositionRecords[1]/nrow(scaledGrid)`.
+
+# Analysis in JAGS
+
+The data were input into JAGS under the model defined as 'model.txt' in the parent directory of this repository. One million iterations were run with four chains, and half of these were discarded as burn-in. I selected one million iterations due to the results observed experimenting with smaller iteration sizes; often, the estimates of N were overestimated by periodic sampling of the parameters $\lambda$ and $\theta$ in extremes of the state space. When 50,000 iterations proved too small, I selected one million since the analysis time is relatively short.
+
+To keep the dimensions of the visited sites constant, I used an indicator variable `vis[i,t]` multiplied against $p_0$ to fix the probability of encounter at unvisited sites to 0. 
+
+The initializer function provided appears as follows:
+
+```{r, eval = F, echo = T}
+inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSites, ncol = maxR)), 
+                        R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
+                        N1 = rowSums(y))}
+```
+
+I initialized p0 to be the correct value, R to be relatively small, and most importantly, I initialized the first population size at all sites to be the `rowSums` of $y_{it}$. For there to be no conflicting parent values, the starting population must be *at least* as large as the observed counts, and we certainly cannot have an initial value of 0 where we have non-zero observations. 
+
+Since we fix the first column (time 0, or initial deposition period) of $p_0$ and $R$ to be 0 within the model script, those retain NA values in the initializing function.  
+
+## Analysis summary
+
+A summary of the analysis follows:
+
+```{r, jagsOut}
+library(jagsUI)
+if(!exists("jagsOut")){load('oneMilTest.Rdata')}
+summary(jagsOut)
+```
+
+Observe that all of the estimates are within coverage except for `N_time[3]`, and `theta`. 
+
+Also note that `N_time[1]` refers to $N_0$, and `N_time[4]` would refer to $N_3$, the population size resulting after recruitment and sampling on the third occasion. This number is of no importance to us, since we did not sample a fourth occasion. 
+
+The model appears to be running, albeit with some biased estimates. I expect that perhaps this may be due to relatively small sample size per grid cell, or perhaps a random outcome of the simulation. More simulations should be done to validate this model.
 
 ### Footnotes
