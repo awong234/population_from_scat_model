@@ -544,18 +544,89 @@ print(table1)
 
 We see that `r table1[2]` individuals of `r sum(table1)` individuals are removed in Round 1: this is approximately 80%, or more specifically, `r table1[2]/sum(table1)` %.
 
-# Analysis of data
+# Data structure
 
 The data obtained are a record of collections per grid, per visit. Below, I randomly sample a few records from each visit to show the counts.
 
-```{r scatData}
+```{r scatData, comment = NULL}
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1)
 
 dataObtained %>% mutate(gridID = factor(gridID, levels = scaledGrid$ID), RoundRemoved = factor(RoundRemoved)) %>% group_by(RoundRemoved, gridID) %>% tally %>% group_by(RoundRemoved) %>% sample_n(5) 
 
 ```
 
-The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsend 2011. 
+Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above.
+
+```{r, scatDataWide, comment = NULL, warning=FALSE}
+# All grids ever visited.
+gridsVisited = scatSim$GridVisitsRecords %>% bind_rows %>% pull(ID) %>% unique %>% sort
+
+# Which grids among the total were visited, per round? 
+vis = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){gridsVisited %in% x$ID}) %>% do.call(what = cbind, args = .) %>% cbind(F, .)
+vis = vis*1 # Convert to integer
+rownames(vis) = as.character(gridsVisited)
+
+# Indexed.
+gridsIndex = as.integer(gridsVisited %>% as.factor)
+names(gridsIndex) = as.character(gridsVisited)
+
+# Number of sites ever visited.
+nSites = length(gridsIndex)
+
+# Number of VISITS
+maxR = 3
+
+# Number of occasions INCLUDING original deposition
+maxT = maxR + 1
+
+# Format data properly. We need counts at each site (gridID). We need to preserve 0 counts. 
+# We also need sites visited in each round.
+
+
+
+getCounts <- function() { # quick, no need for formal arguments, just avoiding side-effects.
+  
+  counts = list()
+
+  for(r in 1:length(scatSim$GridVisitsRecords)){
+    
+    gridsVisited = scatSim$GridVisitsRecords[[r]]
+    
+    counts[[r]] = dataObtained %>% filter(RoundRemoved == r) %>% mutate(gridID = factor(gridID, levels = gridsVisited$ID)) %>% group_by(gridID) %>% 
+      summarize(count = n()) %>% complete(gridID, fill = list(count = 0))
+    
+  }
+  
+  return(counts)
+  
+}
+
+counts = getCounts()
+
+counts_long = bind_rows(counts) %>% mutate(Round = rep(1:length(counts), sapply(X = counts, FUN = function(x){nrow(x)}))) %>% mutate(gridID = as.integer(gridID))
+
+# Check to see visits are right. They are.
+
+counts_xy = lapply(counts, FUN = function(x){x %>% left_join(scaledGrid %>% mutate(ID = factor(ID)), by = c("gridID" = "ID"))}) # Obtain grid centers in data
+
+# NA's show when sites not visited
+counts_wide = spread(counts_long, key = Round, value = count) %>% arrange(gridID)
+counts_wide = cbind('gridID' = counts_wide$gridID, `0` = NA, counts_wide[,2:4])
+
+# NA's don't go into jags though, that's what `vis` is for; to indicate which sites were visited. y will be counts only.
+y = counts_wide[,2:5]
+y[is.na(y)] = 0
+
+print(counts_wide[1:20,])
+print("...")
+```
+In the above dataset, I've truncated the first 20 rows for visibility. NA's exist where the site was *not* visited during each round (integer column names), and rows with all 0's exist, indicating grid cells where no counts were made, but were visited. The data are easily checked against the following plot for visual confirmation:
+
+![](readme_files/scatCounts.gif)
+
+# Model Definition
+
+The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsen 2011. 
 
 At any given site, the observations are modeled as binomial, with the structure
 
@@ -564,19 +635,73 @@ n_{it} \sim \text{Bin}(N_{it},p)
 $$
 with $n_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
 
-Where we depart from the models of Dail and Madsen is that we model survival differently. Survival in the simplest structure will be an indicator function evaluating whether the individual was encountered; if so, it is immediately removed from the population. If not, it survives until the next occasion.
+Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; therefore we have perfect knowledge of 'survival'. We retain the basic Poisson structure for recruitment, and I relabel this $R$.
+
+In our model here, I choose to simulate the process as follows:
+
+|          |      Round 0    |      Round 1     |     Round 2     |     Round 3     |
+| -------- | :--------------:| :-------------:  | :-------------: | :-------------: |
+| N status |      $N_0$      | $N_0 + R_1 - y_1$|$N_1 + R_2 - y_2$|  $N_2+R_3-y_3$  |
+
+In this fashion, the sums above represent the final abundance of individual scats among the observed grid cells *after* all events of collection and recruitment have occurred. The implication of this is that the counts $y_{it}$ are conditional on the sum $N_{t-1}$ as defined above. The model is as follows:
+
+\begin{gather}
+y_{it} \sim \text{Bin}(N_{i,t-1}, p_{it})\\
+N_{it} = N_{i, t-1} + R_{it} - y_{it}\\
+N_{i0} \sim \text{Poisson}(\lambda)\\
+R_{it} \sim \text{Poisson}(\theta) ; t > 0\\
+\end{gather}
+
+The parameters to estimate are thus $\lambda$, $\theta$, and $p_{it}$. I model $p_{it}$ as homogeneous with all entries equal to $p_{00}$ which has the uninformative prior $p_{00} \sim \text{Uniform}(0,1)$. $\lambda$ is the exponent of a normal prior $\beta_0 \sim \text{Norm}(0, 0.01)$, and $\theta$ has a prior $\theta \sim \text{Uniform}(0,100)$. 
+
+
+# Truth data 
+
+I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are `r nrow(scaledGrid)` total grid cells, and we sample a total of `r gridsVisited %>% length` cells. The population size among the grid cells we visit in total is as follows:
+
+```{r, trueN}
+scatSim$ScatRecords$`Round 3` %>% filter(gridID %in% gridsVisited) %>% nrow
+```
+
+In each round, the population size available to be sampled is:
+
+```{r, trueNperRound}
+
+gridsVisitedperRound = sapply(X = scatSim$GridVisitsRecords, FUN = function(x){x$ID})
+
+popAvail = c(0,
+  scatSim$ScatRecords[[1]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[1]]) %>% nrow,
+  scatSim$ScatRecords[[2]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[2]]) %>% nrow,
+  scatSim$ScatRecords[[3]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[3]]) %>% nrow
+)
 
 
 
-# Final update notes
+names(popAvail) = paste("Round", 0:3)
 
-At this time, the simulation is complete, and the dataset is obtained. Next tasks are to incorporate detection probability into the simulation, and provide a model with which JAGS can estimate the appropriate parameters, with the ultimate goal of a population estimate of scats. 
+print(popAvail)
+```
 
-Options for simulating detection probability:
+We made the following observations:
 
-* Total length of path in grid cell
-* Total time spent in grid cell
-* Total length of path in grid cell times total time spent in grid cell (my preferred option)
-* Fraction of grid cell area covered, assuming a fixed detection radius around each GPS fix point.
+```{r, countsPerRound}
+countSums = colSums(counts_wide, na.rm=T)[2:5]
+names(countSums) = paste("Round", 0:3)
+print(countSums)
+```
+
+Per round, the proportions taken are:
+
+```{r, propsPerRound}
+(countSums/popAvail)
+```
+
+with mean approximately `r ((countSums/popAvail) %>% mean(na.rm = T))*100`%. Notice that the sum of these time-specific available population sizes is NOT the total population size, due to individuals carried between sessions. 
+
+Our observations thus form approximately `r (colSums(counts_wide, na.rm=T)[2:5] %>% sum /  scatSim$ScatRecords[[3]] %>% filter(gridID %in% gridsVisited) %>% nrow)*100`% of the scats available to be observed, which is how we simulated the process.
+
+# Update notes
+
+Analyzing this dataset in JAGS under the model specified (located as 'model.txt') provides errant estimates of the parameters, often despite convergence. 
 
 ### Footnotes

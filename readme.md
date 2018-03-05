@@ -278,42 +278,127 @@ print(table1)
 
 We see that 50 individuals of 65 individuals are removed in Round 1: this is approximately 80%, or more specifically, 0.7692308 %.
 
-# Analysis of data
+# Data structure
 
 The data obtained are a record of collections per grid, per visit. Below, I randomly sample a few records from each visit to show the counts.
 
 
 ```
-## # A tibble: 15 x 3
-## # Groups:   RoundRemoved [3]
-##    RoundRemoved gridID     n
-##          <fctr> <fctr> <int>
-##  1            1    328     1
-##  2            1    222     1
-##  3            1    621     2
-##  4            1    159     1
-##  5            1    317     1
-##  6            2    346     1
-##  7            2    487     1
-##  8            2    566     1
-##  9            2     67     1
-## 10            2    502     1
-## 11            3    569     2
-## 12            3    299     2
-## 13            3    568     1
-## 14            3    501     2
-## 15            3     96     1
+# A tibble: 15 x 3
+# Groups:   RoundRemoved [3]
+   RoundRemoved gridID     n
+         <fctr> <fctr> <int>
+ 1            1    328     1
+ 2            1    222     1
+ 3            1    621     2
+ 4            1    159     1
+ 5            1    317     1
+ 6            2    346     1
+ 7            2    487     1
+ 8            2    566     1
+ 9            2     67     1
+10            2    502     1
+11            3    569     2
+12            3    299     2
+13            3    568     1
+14            3    501     2
+15            3     96     1
 ```
 
-# Final update notes
+Of course, we must complete the data with counts of 0 at those grids that we did visit. To do this, we pull the grid ID's from the set of all grids visited (recorded during the simulation as having track points > 0 within a grid), and then use the `complete()` function from `tidyr` to fill in the 0 counts for those grids missing from the dataset above.
 
-At this time, the simulation is complete, and the dataset is obtained. Next tasks are to incorporate detection probability into the simulation, and provide a model with which JAGS can estimate the appropriate parameters, with the ultimate goal of a population estimate of scats. 
 
-Options for simulating detection probability:
+```
+   gridID  0  1  2  3
+1      67 NA  0  1  0
+2      68 NA  2  0  1
+3      96 NA  1  0  1
+4      97 NA  0  0  0
+5      98 NA  1  0  0
+6      99 NA  1  0  0
+7     125 NA  1  0  1
+8     126 NA  2  0 NA
+9     128 NA  0  1  2
+10    129 NA  1  0  1
+11    130 NA  0  0  2
+12    154 NA  0  0  0
+13    159 NA  1  0  0
+14    160 NA  2  0  0
+15    161 NA  1  0  1
+16    162 NA  0 NA NA
+17    183 NA  0  0  0
+18    189 NA NA  1 NA
+19    190 NA  1  0  1
+20    191 NA  0  0  3
+```
 
-* Total length of path in grid cell
-* Total time spent in grid cell
-* Total length of path in grid cell times total time spent in grid cell (my preferred option)
-* Fraction of grid cell area covered, assuming a fixed detection radius around each GPS fix point.
+```
+[1] "..."
+```
+In the above dataset, I've truncated the first 20 rows for visibility. NA's exist where the site was *not* visited during each round (integer column names), and rows with all 0's exist, indicating grid cells where no counts were made, but were visited. The data are easily checked against the following plot for visual confirmation:
+
+![](readme_files/scatCounts.gif)
+
+# Model Definition
+
+The general idea here is that we have repeated counts of a population of individuals, which are usually modeled in the "N-mixture" fashion developed by Royle 2004, and extended for open populations by Dail and Madsen 2011. 
+
+At any given site, the observations are modeled as binomial, with the structure
+
+$$
+n_{it} \sim \text{Bin}(N_{it},p)
+$$
+with $n_{it}$ being the observed counts at site $i$, on occasion $t$, $N_{it}$ being the total population available for sampling at site $i$ on occasion $t$, and $p$ the detection probability. 
+
+Where we depart from the models of Dail and Madsen is that we model differently the population. Instead of the sum of the densities of the random variables for survival $S_{it}$ and recruitment $G_{it}$, we need not model survival if we make the assumption that the 'dying' individuals are only those we collect; therefore we have perfect knowledge of 'survival'. We retain the basic Poisson structure for recruitment, and I relabel this $R$.
+
+In our model here, I choose to simulate the process as follows:
+
+|          |      Round 0    |      Round 1     |     Round 2     |     Round 3     |
+| -------- | :--------------:| :-------------:  | :-------------: | :-------------: |
+| N status |      $N_0$      | $N_0 + R_1 - y_1$|$N_1 + R_2 - y_2$|  $N_2+R_3-y_3$  |
+
+In this fashion, the sums above represent the final abundance of individual scats among the observed grid cells *after* all events of collection and recruitment have occurred. The implication of this is that the counts $y_{it}$ are conditional on the sum $N_{t-1}$ as defined above. The model is as follows:
+
+\begin{gather}
+y_{it} \sim \text{Bin}(N_{i,t-1}, p_{it})\\
+N_{it} = N_{i, t-1} + R_{it} - y_{it}\\
+N_{i0} \sim \text{Poisson}(\lambda)\\
+R_{it} \sim \text{Poisson}(\theta) ; t > 0\\
+\end{gather}
+
+The parameters to estimate are thus $\lambda$, $\theta$, and $p_{it}$. I model $p_{it}$ as homogeneous with all entries equal to $p_{00}$ which has the uninformative prior $p_{00} \sim \text{Uniform}(0,1)$. $\lambda$ is the exponent of a normal prior $\beta_0 \sim \text{Norm}(0, 0.01)$, and $\theta$ has a prior $\theta \sim \text{Uniform}(0,100)$. 
+
+
+# Truth data 
+
+I have not modeled density, so each of these are outcomes of the random variables *per grid*. There are 754 total grid cells, and we sample a total of 101 cells. The population size among the grid cells we visit in total is as follows:
+
+
+```
+## [1] 146
+```
+
+In each round, the population size available to be sampled is:
+
+
+```
+## Round 0 Round 1 Round 2 Round 3 
+##       0      65      50      48
+```
+
+We made the following observations:
+
+
+```
+##  0  1  2  3 
+##  0 50 35 44
+```
+
+Our observations thus form approximately 0.8835616% of the scats available to be observed, which is how we simulated the process.
+
+# Update notes
+
+Analyzing this dataset in JAGS under the model specified (located as 'model.txt') provides errant estimates of the parameters, often despite convergence. 
 
 ### Footnotes
