@@ -202,6 +202,7 @@ counts_long = bind_rows(counts) %>% mutate(Round = rep(1:length(counts), sapply(
 counts_xy = lapply(counts, FUN = function(x){x %>% left_join(scaledGrid %>% mutate(ID = factor(ID)), by = c("gridID" = "ID"))}) # Obtain grid centers in data
 
 for(r in 1:3){
+  # Cairo::Cairo(width = 1920, height = 1080,file = paste0("CountsRound",r,'.png'), dpi = 150)
   print(
   
   ggplot() + 
@@ -214,6 +215,7 @@ for(r in 1:3){
     ggtitle(paste0("Round ", r))
     
   )
+  # dev.off()
 }
 
 # NA's show when sites not visited
@@ -225,8 +227,17 @@ y = counts_wide[,2:5]
 y[is.na(y)] = 0
 
 
-# True N per round
-scatSim$ScatRecords$`Round 3` %>% filter(gridID %in% gridsVisited) %>% nrow
+# Available N per round
+
+gridsVisitedperRound = sapply(X = scatSim$GridVisitsRecords, FUN = function(x){x$ID})
+
+(
+popAvail = c(0,
+             scatSim$ScatRecords[[1]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[1]]) %>% nrow,
+             scatSim$ScatRecords[[2]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[2]]) %>% nrow,
+             scatSim$ScatRecords[[3]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[3]]) %>% nrow
+)
+)
 
 
 # From here on out, a grid cell is a site. 
@@ -277,9 +288,12 @@ inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSi
 
 data = list(y = y, vis = vis, nSites = nSites, maxT = maxT)
 
-params = c("N_time", "N_tot", "p00", "theta", "R", "lambda")
+params = c("N_time", "p00", "theta", "lambda")
 
-jagsOut = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', iter.increment = 1000, n.chains = 4, save.all.iter = T, Rhat.limit = 1.1, max.iter = 5e4, parallel = T)
+niter = 1e6
+nburn = niter/2
+
+jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
 
 jagsOut
 

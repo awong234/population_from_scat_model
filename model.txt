@@ -24,18 +24,20 @@ model
 
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.
-        # Remember that y[i,3] is the SECOND visit, so it makes sense that N3 should be dependent upon what was found in the previous visit.
+        # Remember that y[i,t] is the t-1 visit, so it makes sense that N_t should be dependent upon what was found in the previous visit.
         for(t in 2:maxT){
             R[i,t] ~ dpois(theta)
             N[i,t] = N[i,t-1] + R[i,t] - y[i,t]
         }
         
-        # Observation likelihood. Counts are conditional on population size at previous time step, and detection (which also depends on having visited the site).
+        # Observation likelihood. Counts are conditional on population size at previous time step (after recruits and removals), and detection (which also depends on having visited the site).
         for(t in 2:maxT){ 
 
+            # Homogeneous detection
             p0[i,t] = p00
 
             # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8            
+            # vis is a matrix of binary indicators with '1' being 'visited', and '0' being 'not visited'. Multiply by p0 to fix 'not visited' sites to p = 0, and obtain a new matrix.
             pv[i,t] = p0[i,t] * vis[i,t]  
 
             y[i,t] ~ dbin(pv[i,t],N[i,t-1])
@@ -49,9 +51,5 @@ model
     for(t in 1:maxT){
             N_time[t] = sum(N[,t])
         }
-
-    
-    N_tot = sum(N_time[])
-
 
 }
