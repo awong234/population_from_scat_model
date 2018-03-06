@@ -141,7 +141,11 @@ scaledData = getScaledData(transectPoints = transPoints) # Generates scaled trac
 scaledGrid = scaledData$scaledGrid
 scaledTracks = scaledData$scaledTracks
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = 500, recruit_rate = 200, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+# Set parameters
+scats_init = 2000
+recruit_rate = 800
+
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
@@ -225,19 +229,26 @@ counts_wide = cbind('gridID' = counts_wide$gridID, `0` = NA, counts_wide[,2:4])
 # NA's don't go into jags though, that's what `vis` is for; to indicate which sites were visited. y will be counts only.
 y = counts_wide[,2:5]
 y[is.na(y)] = 0
+y = as.matrix(y)
 
 
 # Available N per round
 
 gridsVisitedperRound = sapply(X = scatSim$GridVisitsRecords, FUN = function(x){x$ID})
 
-(
 popAvail = c(0,
              scatSim$ScatRecords[[1]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[1]]) %>% nrow,
              scatSim$ScatRecords[[2]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[2]]) %>% nrow,
              scatSim$ScatRecords[[3]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[3]]) %>% nrow
 )
-)
+
+# Average density  per round
+
+popAvail[2:4] / sapply(X = gridsVisitedperRound, FUN = length)
+
+names(popAvail) = paste("Round", 0:3)
+
+print(popAvail)
 
 
 # From here on out, a grid cell is a site. 
@@ -297,3 +308,5 @@ jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.fi
 
 jagsOut
 
+scats_init/nrow(scaledGrid) # Expected lambda
+recruit_rate / nrow(scaledGrid) # Expected theta
