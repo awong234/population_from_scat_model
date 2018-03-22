@@ -142,10 +142,10 @@ scaledGrid = scaledData$scaledGrid
 scaledTracks = scaledData$scaledTracks
 
 # Set parameters
-scats_init = 2000
-recruit_rate = 800
+scats_init = nrow(scaledGrid)*5
+recruit_rate = nrow(scaledGrid)*2
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 1, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
 
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
@@ -213,7 +213,7 @@ for(r in 1:3){
     geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
     geom_tile(data = counts_xy[[r]], aes(x = Easting, y = Northing, fill = factor(count))) + 
     geom_text(data = scaledGrid, aes(x = Easting, y = Northing, label = ID), size = 3) + 
-    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == r), aes(x = Easting, y = Northing)) + 
+    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == 1), aes(x = Easting, y = Northing)) + 
     geom_point(data = dataObtained %>% filter(RoundRemoved == r), aes(x = x, y = y), color = 'red') + 
     scale_fill_viridis(discrete = T) + 
     ggtitle(paste0("Round ", r))
@@ -234,7 +234,7 @@ y = as.matrix(y)
 
 # Available N per round
 
-gridsVisitedperRound = sapply(X = scatSim$GridVisitsRecords, FUN = function(x){x$ID})
+gridsVisitedperRound = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){x$ID})
 
 popAvail = c(0,
              scatSim$ScatRecords[[1]] %>% filter(Removed == 0, gridID %in% gridsVisitedperRound[[1]]) %>% nrow,
@@ -299,10 +299,10 @@ inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSi
 
 data = list(y = y, vis = vis, nSites = nSites, maxT = maxT)
 
-params = c("N_time", "p00", "theta", "lambda")
+params = c("N_time", 'p00', "theta", "lambda")
 
 niter = 1e6
-nburn = niter/2
+nburn = niter/4
 
 jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
 
@@ -310,3 +310,8 @@ jagsOut
 
 scats_init/nrow(scaledGrid) # Expected lambda
 recruit_rate / nrow(scaledGrid) # Expected theta
+popAvail # N available per round
+
+jagsOut$mean$N_time
+jagsOut$mean$theta
+jagsOut$mean$lambda

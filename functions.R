@@ -188,7 +188,7 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
   
   for(r in 1:maxR){
     
-    siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
+    siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == 1)
     
     gridsVisited = countPointsInGrid(queryPoints = siteTrackPoints, gridPoints = gridLayer %>% select(Easting, Northing)) %>% filter(Freq > 0)
     

@@ -2,12 +2,13 @@ model
 {
     # Priors
     p00 ~ dunif(0,1)
-    theta ~ dunif(0,100)
+    theta0 ~ dnorm(0,0.01) #prior for theta
     beta0 ~ dnorm(0,0.01) #prior for lambda
-
+    
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
     lambda = exp(beta0)    
-
+    theta = exp(theta0)
+    
     for(i in 1:nSites){
 
         # Need model for N's       
