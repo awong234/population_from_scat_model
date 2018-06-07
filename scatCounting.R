@@ -7,6 +7,10 @@
 # 3. Model scat encounters as a modified spatial Jolly-Seber model.
 # 3a. Need to implement a per-capita recruitment rate, as data augmentation implies a varying recruitment rate. 
 
+# 2018-06-07
+
+# New iteration tests to see if addition of length and time of track in grid as a covariate on p enhances estimation.
+
 # Setup --------------------------------------------------------------------------------------------------------------------------------------------
 
 # Required
@@ -24,96 +28,6 @@ library(viridis)
 
 source('functions.R')
 
-# DEPRECATED Format example dog tracks ------------------------------------------------------------------------------------------------------------
-
-# These are the sites that the gpx files are pulled from. Can probably automate in the future if needed. 
-
-# Press F2 on any function to see its contents.
-
-sites = c(rep("12B2",3), rep("15A4", 3))
-
-out = getGPX() #loads gpx files
-
-allPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
-
-# Need to normalize points to 0,1, but they need to be PER SITE, not all
-# together. In this way, the centroids of the sites are centered on 0, and state
-# space settings, scat populations apply to both.
-
-# Scale individual transect points. Obtain scaling parameters.
-
-scaled_12B2 = allPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
-scaled_15A4 = allPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
-
-scaled_12B2_center = attr(x = scaled_12B2, which = 'scaled:center')
-scaled_12B2_scale = attr(x = scaled_12B2, which = 'scaled:scale')
-
-scaled_15A4_center = attr(x = scaled_15A4, which = 'scaled:center')
-scaled_15A4_scale = attr(x = scaled_15A4, which = 'scaled:scale')
-
-allPoints@coords[allPoints@data$Site == "12B2"] = scaled_12B2
-allPoints@coords[allPoints@data$Site == "15A4"] = scaled_15A4
-
-meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
-
-
-# Assign new coordinates to data frame.
-
-xlim = c(-3,3)
-ylim = c(-2,2)
-
-# Generate grid
-
-scaledGrid = getScaledGrid() %>% mutate(ID = 1:nrow(.)) %>% select(ID, Easting, Northing)
-
-bbox_scaled = getBbox(scaledGrid %>% select(Easting, Northing))
-
-ggplot() +
-  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
-  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) +
-  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
-
-
-# DEPRECATED Simulation of scats & state space ----------------------------------------------------------------------------------------------------
-
-# Example follows. Dedicated function has been created.
-
-set.seed(1)
-
-scats_init = 500
-
-maxR = 3
-
-scatXY = cbind.data.frame(ID = 1:scats_init,
-                          x = runif(n = scats_init, min = bbox_scaled[1,1], max = bbox_scaled[1,2]),
-                          y = runif(n = scats_init, min = bbox_scaled[2,1], max = bbox_scaled[2,2]),
-                          RoundDeposited = factor(x = 0, levels = c(0:maxR)), pEnc = 0, Removed = factor(x = 0, levels = c(0,1)))
-
-gridX = scaledGrid %>% pull(Easting) %>% unique %>% sort
-gridY = scaledGrid %>% pull(Northing) %>% unique %>% sort
-
-
-scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
-
-scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = scaledGrid)
-
-# Try out binning scats by grid. 
-
-d = countPointsInGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
-
-gridX = scaledGrid %>% pull(Easting) %>% unique %>% sort
-gridY = scaledGrid %>% pull(Northing) %>% unique %>% sort
-
-scatsGridRef = refPointsToGrid(queryPoints = scatXY %>% select(x,y), gridPoints = scaledGrid %>% select(Easting, Northing))
-
-scatXY = addGridID_to_Points(queryPoints = scatXY, refPointsToGrid_Output = scatsGridRef, gridLayer = scaledGrid)
-
-ggplot() + 
-  geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
-  geom_text(data = d, aes(x = gridX[x], y = gridY[y], label = Freq)) + 
-  geom_path(data = allPoints %>% as.data.frame(), aes(x = Easting, y = Northing, color = RoundBySite)) + 
-  geom_point(data = scatXY, aes(x = x, y = y), shape = 1) + 
-  coord_cartesian(xlim = xlim, ylim = ylim) + coord_map()
 
 # Simulate encounters of scats -------------------------------------------------------------------------------------------------------------
 
@@ -134,7 +48,7 @@ sites = c(rep("12B2",3), rep("15A4", 3))
 
 out = getGPX() #loads gpx files
 
-transPoints = convertPoints() #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
+transPoints = convertPoints(gpx = out) #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
 
 scaledData = getScaledData(transectPoints = transPoints) # Generates scaled track data, and a grid around it
 
