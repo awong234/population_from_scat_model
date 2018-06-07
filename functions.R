@@ -1,7 +1,9 @@
 
-getGPX = function(){
+getGPX = function(path = NULL){
   
-  gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]
+  if(is.null(path)){gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]}else{
+    gpxFiles = dir(path = path)[grep(pattern = '.gpx', x = dir(), perl = T)]
+  }
   
   gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
@@ -16,15 +18,16 @@ getGPX = function(){
   out = lapply(X = out, FUN = function(x) spTransform(x = x, CRSobj = CRS("+proj=utm +zone=18 +datum=WGS84")))
   
   return(out)
+  
 }
 
-convertPoints = function(){
+convertPoints = function(gpx){
   
-  allPoints = foreach(i = seq_along(out), .combine = rbind) %do% {
-    data.frame(out[[i]]@coords, 
+  allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
+    data.frame(gpx[[i]]@coords, 
                Site = sites[i], 
-               Date = out[[i]]@data$time %>% as.Date %>% unique, 
-               Time = out[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
+               Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
+               Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
   }
   
@@ -44,6 +47,8 @@ convertPoints = function(){
 
 getScaledData = function(transectPoints, adj.bbox = 100, gridSize = 50){ # Obtain a scaled grid from the bounding box from a back-scaled allPoints dataset.
   
+  # Should fix this later to be more general once we move to testing on more sites.
+  
   scaled_12B2 = transectPoints %>% as.data.frame() %>% filter(Site == "12B2") %>% select(Easting, Northing) %>% scale
   scaled_15A4 = transectPoints %>% as.data.frame() %>% filter(Site == "15A4") %>% select(Easting, Northing) %>% scale
   
@@ -58,13 +63,15 @@ getScaledData = function(transectPoints, adj.bbox = 100, gridSize = 50){ # Obtai
   
   meanScale = scaled_12B2_scale %>% bind_rows(scaled_15A4_scale) %>% colMeans
   
+  # Back-transforming the scaled & centered points to obtain a bounding box surrounding all the points.
+  
   allPoints_bt = apply(X = transectPoints@coords, MARGIN = 1, FUN = function(x){x*scaled_12B2_scale + scaled_12B2_center}) %>% t %>% data.frame
   
   coordinates(allPoints_bt) = ~Easting + Northing
   
   bbox = allPoints_bt@bbox
   
-  bbox = bbox + c(rep(-adj.bbox, 2), rep(adj.bbox, 2))
+  bbox = bbox + c(rep(-adj.bbox, 2), rep(adj.bbox, 2)) 
   
   gridOverlay = expand.grid(seq(bbox[1,1], bbox[1,2], gridSize), seq(bbox[2,1], bbox[2,2], gridSize))
   
