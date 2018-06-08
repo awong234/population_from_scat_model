@@ -124,7 +124,7 @@ refPointsToGrid = function(queryPoints, gridPoints){
   
   
   
-  return(binxy)
+  return(binxy) # Returns indexes of the x and y in the grid layer. Use next function to add the gridID's to the point layer.
 }
 
 addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
@@ -132,6 +132,7 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
   gridX = gridLayer %>% pull(Easting) %>% unique %>% sort
   gridY = gridLayer %>% pull(Northing) %>% unique %>% sort
   
+  # Adding to point layer
   queryPoints = queryPoints %>% mutate(gridID = data.frame(x = gridX[refPointsToGrid_Output$x], y = gridY[refPointsToGrid_Output$y]) %>% 
                                          left_join(y = gridLayer, by = c("x" = "Easting", "y" = "Northing")) %>% pull(ID))
   
@@ -139,9 +140,27 @@ addGridID_to_Points = function(queryPoints, refPointsToGrid_Output, gridLayer){
   
 }
 
-simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, probForm = "indicator", p0 = 0.8){
+trackFixesCount = function(track, gridLayer){
   
-  if(!probForm %in% c("indicator", "length", "constant")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
+  # Count number of GPS fixes within a grid cell, proxy to time*space interaction. Fixes are at 1 minute intervals *nearly always*. 
+  
+  refOut = refPointsToGrid(track, gridLayer)
+  
+  track = addGridID_to_Points(track, refPointsToGrid_Output = refOut, gridLayer = gridLayer)
+  
+  # Now, count up the first, second, etc. occurrences of each grid cell. 
+  
+  fixesPerCell = track$gridID %>% table %>% as.data.frame() %>% rename(gridID = '.') %>% mutate(gridID = as.integer(as.character(gridID)))
+  
+  return(fixesPerCell)
+  
+}
+
+simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, 
+                    probForm = "indicator", p0 = 0.8, a_fixes = 3, b_fixes = 0.05){
+  
+  if(!probForm %in% c("indicator", "length", "constant", "fixes")) message("probForm not within parameters. Defaulting to indicator probability formulation.")
+  
   if(p0 < 0 | p0 > 1){stop("p0 must be bounded by 0,1.")}
   
   # function for probForm
@@ -195,7 +214,7 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
   
   for(r in 1:maxR){
     
-    siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == 1)
+    siteTrackPoints = transectPoints %>% as.data.frame %>% filter(Site == siteToTest, Round == r)
     
     gridsVisited = countPointsInGrid(queryPoints = siteTrackPoints, gridPoints = gridLayer %>% select(Easting, Northing)) %>% filter(Freq > 0)
     
@@ -234,9 +253,40 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
       
     }
     
+    if(probForm == 'fixes'){
+      
+      gridFixes = trackFixesCount(siteTrackPoints, gridLayer)
+      
+      if(debug){
+        
+        gridLayer2 = gridLayer %>% left_join(gridFixes, by = c('ID' = 'gridID'))
+        
+        print(
+          ggplot() +
+            geom_tile(data = gridLayer2, aes(x = Easting, y = Northing, fill = Freq), color = 'black') +
+            geom_text(data = gridLayer2, aes(x = Easting, y = Northing, label = ID), size = 3) + 
+            geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing), color = 'blue')
+        )
+        
+      }
+      
+      scatsAvail = scatsAvail %>% left_join(gridFixes, by = c("gridID" = "gridID"))
+      
+      scatsAvail$Freq[is.na(scatsAvail$Freq)] = 0
+      
+      scatsAvail = scatsAvail %>% mutate(pEnc = (1 / (1 + exp((a_fixes - b_fixes*Freq)))))
+      
+      scatXY[scatXY$ID %in% scatsAvail$ID, "pEnc"] = scatsAvail$pEnc
+      
+      scatXY[scatXY$ID %in% scatsAvail$ID,"Removed"] = rbinom(n = nrow(scatsAvail), size = 1, prob = scatsAvail$pEnc)
+      
+      # scatXY$Removed = factor(scatXY$Removed, levels = c(0,1))
+      
+    }
+    
     if(probForm == "length"){
       
-      stop("This function is not available yet")
+      # Need to measure length of track in grid. Add to gridVisitRecords
       
     }
     
