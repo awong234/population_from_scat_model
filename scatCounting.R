@@ -25,6 +25,7 @@ library(jagsUI)
 
 library(ggplot2)
 library(viridis)
+library(plotly)
 
 source('functions.R')
 
@@ -55,11 +56,11 @@ scaledData = getScaledData(transectPoints = transPoints) # Generates scaled trac
 scaledGrid = scaledData$scaledGrid
 scaledTracks = scaledData$scaledTracks
 
-# Set parameters
+ # Set parameters
 scats_init = nrow(scaledGrid)*5
 recruit_rate = nrow(scaledGrid)*2
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "12B2", probForm = 'indicator', p0 = 0.8)
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "12B2", probForm = 'fixes', p0 = 0.8)
 
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
@@ -127,7 +128,7 @@ for(r in 1:3){
     geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
     geom_tile(data = counts_xy[[r]], aes(x = Easting, y = Northing, fill = factor(count))) + 
     geom_text(data = scaledGrid, aes(x = Easting, y = Northing, label = ID), size = 3) + 
-    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == 1), aes(x = Easting, y = Northing)) + 
+    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == r), aes(x = Easting, y = Northing)) + 
     geom_point(data = dataObtained %>% filter(RoundRemoved == r), aes(x = x, y = y), color = 'red') + 
     scale_fill_viridis(discrete = T) + 
     ggtitle(paste0("Round ", r))
