@@ -77,6 +77,22 @@ vis = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){gridsVisited %in% 
 vis = vis*1 # Convert to integer
 rownames(vis) = as.character(gridsVisited)
 
+# What was the effort like, per grid cell per round?
+
+eff = lapply(X = scatSim$GridVisitsRecords, FUN = function(x){gridsVisited %in% x$ID})
+
+
+
+# eff[[2]][which(eff[[2]])] = scatSim$GridVisitsRecords[[2]]$Freq
+
+eff = Map(f = function(x,y){
+  x[which(x)] = y$Freq 
+  return(x)
+  }, 
+  x = eff, 
+  y = scatSim$GridVisitsRecords) %>% 
+  do.call(what = cbind, args = .) %>% cbind(F, .)
+
 # Indexed.
 gridsIndex = as.integer(gridsVisited %>% as.factor)
 names(gridsIndex) = as.character(gridsVisited)
@@ -184,6 +200,8 @@ print(popAvail)
 # N[i,t] ; population following t = 1, from 2 to 4.
 # R[i,t] ; recruitment following t = 1. R[i,1] = 0.
 # p0[i,t] ; detection probability at site i, time t. p0[i,1] = 0. All other p0[i,2:maxT] = 0.8.
+# a_fix   ; simulated at 3. Under logit transform, p ~= 0.05 as track fixes approaches 0
+# b_fix   ; simualted at 0.05. The effect of # fixes on p. p = 0.5 at around 60 fixes.
 
 # NOTE: See section 2.3.1 in jags manual, must set p0[i,1] = R[i,1] = NA.
 
@@ -191,17 +209,17 @@ print(popAvail)
 
 # counts y[i,t], with the first column being 0's.
 # visits vis[i,t], with the first column being 0's. 
+# effort eff[i,t], with the first column being 0's.
 
 # Want to track the following parameters:
 
 # N_time
 # N_tot
-# pv
+# a_fix
+# b_fix
 # theta
 # R
 # lambda
-
-
 
 # Format counts
 
