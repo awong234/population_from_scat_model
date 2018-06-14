@@ -220,16 +220,19 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
     
     gridsVisitedID = cbind(x = gridX[gridsVisited$x], y = gridY[gridsVisited$y]) %>% as.data.frame %>% left_join(y = gridLayer, by = c("x" = "Easting", "y" = "Northing"))
     
-    gridsVisited.rec[[r]] = gridsVisitedID
-    
     scatsAvail = scatXY %>% filter(Removed == 0, gridID %in% gridsVisitedID$ID)
     
     if(debug){ #show which scats are available to be detected
+      
+      refOut = refPointsToGrid(siteTrackPoints, gridLayer)
+      siteTrackPoints = addGridID_to_Points(siteTrackPoints, refOut, gridLayer)
+      
       print(
         ggplot() +
           geom_tile(data = gridLayer, aes(x = Easting, y = Northing), fill = 'white', color = 'black') +
           geom_text(data = gridLayer, aes(x = Easting, y = Northing, label = ID), size = 3) +
           geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing), color = 'blue') +
+          geom_point(data = siteTrackPoints %>% filter(gridID == 130), aes(x = Easting, y = Northing), color = 'red')+
           geom_point(data = scatsAvail, aes(x = x, y = y)) + coord_map()
       )
       
@@ -256,6 +259,8 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
     if(probForm == 'fixes'){
       
       gridFixes = trackFixesCount(siteTrackPoints, gridLayer)
+      
+      gridsVisitedID = gridsVisitedID %>% left_join(gridFixes, by = c("ID" = "gridID"))
       
       if(debug){
         
@@ -289,6 +294,8 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
       # Need to measure length of track in grid. Add to gridVisitRecords
       
     }
+    
+    gridsVisited.rec[[r]] = gridsVisitedID
     
     scatXY = scatXY %>% mutate(RoundRemoved = ifelse(test = {ID %in% scatsAvail$ID & Removed == 1}, yes = r, no = RoundRemoved)) %>% mutate(RoundRemoved = factor(RoundRemoved, levels = c(NA,seq(maxR))))
     
