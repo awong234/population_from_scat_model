@@ -1,7 +1,9 @@
 model
 {
     # Priors
-    p00 ~ dunif(0,1)
+    a ~ dunif(0,100) # Prior for alpha parameter. Controls location of how many fixes = 50% p(detect)
+    b ~ dunif(0,100) # Prior for beta parameter. Controls how steep the curve is, also affecting how many fixes = 50% p(detect), but also how sensitive p is to change in fixes.
+    # p00 ~ dunif(0,1)
     theta0 ~ dnorm(0,0.01) #prior for theta
     beta0 ~ dnorm(0,0.01) #prior for lambda
     
@@ -34,14 +36,14 @@ model
         # Observation likelihood. Counts are conditional on population size at previous time step (after recruits and removals), and detection (which also depends on having visited the site).
         for(t in 2:maxT){ 
 
-            # Homogeneous detection
-            p0[i,t] = p00
+            # Detection
+            logit(p0[i,t]) = a + b*eff[i,t]
 
             # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8            
             # vis is a matrix of binary indicators with '1' being 'visited', and '0' being 'not visited'. Multiply by p0 to fix 'not visited' sites to p = 0, and obtain a new matrix.
-            pv[i,t] = p0[i,t] * vis[i,t]  
+            p[i,t] = p0[i,t] * vis[i,t]
 
-            y[i,t] ~ dbin(pv[i,t],N[i,t-1])
+            y[i,t] ~ dbin(p[i,t],N[i,t-1])
 
             
         }        

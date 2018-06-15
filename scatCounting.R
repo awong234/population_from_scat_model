@@ -60,7 +60,7 @@ scaledTracks = scaledData$scaledTracks
 scats_init = nrow(scaledGrid)*5
 recruit_rate = nrow(scaledGrid)*2
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "12B2", probForm = 'fixes', p0 = 0.8)
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "15A4", probForm = 'fixes', a_fixes = 3, b_fixes = 0.05)
 
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
@@ -200,8 +200,6 @@ print(popAvail)
 # N[i,t] ; population following t = 1, from 2 to 4.
 # R[i,t] ; recruitment following t = 1. R[i,1] = 0.
 # p0[i,t] ; detection probability at site i, time t. p0[i,1] = 0. All other p0[i,2:maxT] = 0.8.
-# a_fix   ; simulated at 3. Under logit transform, p ~= 0.05 as track fixes approaches 0
-# b_fix   ; simualted at 0.05. The effect of # fixes on p. p = 0.5 at around 60 fixes.
 
 # NOTE: See section 2.3.1 in jags manual, must set p0[i,1] = R[i,1] = NA.
 
@@ -215,8 +213,8 @@ print(popAvail)
 
 # N_time
 # N_tot
-# a_fix
-# b_fix
+# a
+# b
 # theta
 # R
 # lambda
@@ -226,18 +224,18 @@ print(popAvail)
 
 # # # Jags input # # # 
 
-inits = function(){list(p0 = cbind(rep(NA,nSites), matrix(data = 0.8, nrow = nSites, ncol = maxR)), 
+inits = function(){list(a = 0.00000001, b = 0.000001,
                         R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
                         N1 = rowSums(y))}
 
-data = list(y = y, vis = vis, nSites = nSites, maxT = maxT)
+data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, eff = eff)
 
-params = c("N_time", 'p00', "theta", "lambda")
+params = c("N_time", 'a', 'b', "theta", "lambda")
 
-niter = 1e6
+niter = 1e4
 nburn = niter/4
 
-jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = F)
 
 jagsOut
 
