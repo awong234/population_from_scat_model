@@ -1,3 +1,15 @@
+siteInfoFromFileName = function(path = NULL){
+  
+  if(is.null(path)){
+    fileNames = list.files(pattern = '.gpx')
+  }else{fileNames = list.files(path = path, pattern = '.gpx')}
+  
+  siteNames = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+\\w\\d", text = ., perl = T))}
+  siteDates = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.Date(format = '%m.%d.%y')
+  
+  siteInfo = data.frame(SiteID = siteNames, Date = siteDates)
+  
+}
 
 getGPX = function(path = NULL){
   
@@ -21,11 +33,11 @@ getGPX = function(path = NULL){
   
 }
 
-convertPoints = function(gpx){
+convertPoints = function(gpx, siteInfo){
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
     data.frame(gpx[[i]]@coords, 
-               Site = sites[i], 
+               Site = siteInfo$sites[i], 
                Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
                Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)

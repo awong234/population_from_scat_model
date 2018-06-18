@@ -45,7 +45,7 @@ source('functions.R')
 # 'recruited' scats are generated. Of course, they are independent of the
 # previous set, so it's likely just a matter of a new Poisson distributed population.
 
-sites = c(rep("12B2",3), rep("15A4", 3))
+sites = siteInfoFromFileName()
 
 out = getGPX() #loads gpx files
 
