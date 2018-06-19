@@ -1,3 +1,5 @@
+# Setup --------------------------
+
 siteInfoFromFileName = function(path = NULL){
   
   if(is.null(path)){
@@ -10,6 +12,26 @@ siteInfoFromFileName = function(path = NULL){
   siteInfo = data.frame(SiteID = siteNames, Date = siteDates)
   
 }
+
+# Reformats data dates properly and includes definition of sampling rounds.
+
+reDate = function(data){
+  
+  data$Day = as.Date(data$Date, format = '%m/%d/%Y')
+  data$Round = NA
+  
+  for(i in 1:nrow(data)){
+    if(data$Day[i] >= "2017-06-11" & data$Day[i] <= "2017-07-05"){data$Round[i] = "Clearing"}
+    if(data$Day[i] > "2017-07-05" & data$Day[i] <= "2017-07-17"){data$Round[i] = "Sample1"}
+    if(data$Day[i] > "2017-07-17" & data$Day[i] <= "2017-07-28"){data$Round[i] = "Sample2"}
+    if(data$Day[i] > "2017-07-28" & data$Day[i] <= "2017-08-07"){data$Round[i] = "Sample3"}
+    if(data$Day[i] > "2017-08-07"){data$Round[i] = "Sample4"}
+  }
+  
+  return(data)
+  
+}
+
 
 getGPX = function(path = NULL){
   
@@ -33,11 +55,15 @@ getGPX = function(path = NULL){
   
 }
 
+# Point utilities ----------------------------------------------------------------------
+
 convertPoints = function(gpx, siteInfo){
+  
+  sites = siteInfo$SiteID %>% as.character()
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
     data.frame(gpx[[i]]@coords, 
-               Site = siteInfo$sites[i], 
+               Site = sites[i], 
                Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
                Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
@@ -167,6 +193,8 @@ trackFixesCount = function(track, gridLayer){
   return(fixesPerCell)
   
 }
+
+# Simulation ----------------------------------------------------------------------------
 
 simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "12B2", recruit_rate = 20, maxR = 3, debug = F, seed = 1, 
                     probForm = "indicator", p0 = 0.8, a_fixes = 3, b_fixes = 0.05){
@@ -380,5 +408,49 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
   toReturn = list("ScatRecords" = scatXY.rec, "DepositionRecords" = depositionLog, "GridVisitsRecords" = gridsVisited.rec)
   
   return(toReturn)
+  
+}
+
+# New ideas ----------------------------------------
+
+simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_recruit = 1, maxR = 3, posVis = c(1,2)){
+  
+  gridsVisited$scats = rpois(n = nrow(gridsVisited), lambda = scats_avg)
+  
+  gridsVisited$nVis = sample(x = c(1,2), size = nrow(gridsVisited), replace = T, prob = c(1-propDup, propDup))
+  
+  gridsVisitRec = list()
+  gridsVisitRec[[1]] = gridsVisited
+  
+  sample_rec = list()
+  
+  for(r in 1:maxR){
+    
+    gridsVisited$nVis = sample(x = posVis, size = nrow(gridsVisited), replace = T, prob = c(1-propDup, propDup))
+    
+    sample = list()
+    sample_df = list()
+    
+    # Each pass, take some portion of scats.
+    
+    for(v in 1:max(gridsVisited$nVis)){
+      gridsSampled = gridsVisited %>% filter(nVis >= v)
+      gridsSampled$sample = 0
+      sample[[v]] = rbinom(n = gridsSampled %>% nrow, size = gridsSampled$scats, prob = 0.5)
+      
+      sample_df[[v]] = data.frame('enc' = sample[[v]], 'siteID' = gridsSampled$ID)
+      
+      index = gridsVisited$ID %in% gridsSampled$ID
+      
+      gridsVisited$scats[index] = gridsVisited$scats[index] - sample[[v]]
+    }
+    
+    sample_rec[[r]] = sample_df
+      
+    gridsVisitRec[[r+1]] = gridsVisited
+    
+  }
+  
+  return(list("SampleData" = sample_rec, "GridVisitData" = gridsVisitRec))
   
 }

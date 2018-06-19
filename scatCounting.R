@@ -47,9 +47,11 @@ source('functions.R')
 
 sites = siteInfoFromFileName()
 
+sites = reDate(sites) %>% select(SiteID, Date, Round)
+
 out = getGPX() #loads gpx files
 
-transPoints = convertPoints(gpx = out) #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
+transPoints = convertPoints(gpx = out, siteInfo = sites) #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
 
 scaledData = getScaledData(transectPoints = transPoints) # Generates scaled track data, and a grid around it
 
@@ -60,7 +62,9 @@ scaledTracks = scaledData$scaledTracks
 scats_init = nrow(scaledGrid)*5
 recruit_rate = nrow(scaledGrid)*2
 
-scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = "15A4", probForm = 'fixes', a_fixes = 3, b_fixes = 0.05)
+siteToTest = '15A4'
+
+scatSim = simScats(transectPoints = scaledTracks, gridLayer = scaledGrid, scats_init = scats_init, recruit_rate = recruit_rate, maxR = 3, debug = F, seed = 3, siteToTest = siteToTest, probForm = 'fixes', a_fixes = 3, b_fixes = 0.05)
 
 dataObtained = scatSim$ScatRecords$`Round 3` %>% filter(Removed == 1) # These are the scat piles removed. The data are a cumulative snapshot at the end of the survey, containing all records from the beginning.
 
@@ -144,10 +148,10 @@ for(r in 1:3){
     geom_tile(data = scaledGrid, aes(x = Easting, y = Northing), fill = 'white', color = 'black') + 
     geom_tile(data = counts_xy[[r]], aes(x = Easting, y = Northing, fill = factor(count))) + 
     geom_text(data = scaledGrid, aes(x = Easting, y = Northing, label = ID), size = 3) + 
-    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == '12B2', Round == r), aes(x = Easting, y = Northing)) + 
+    geom_path(data = scaledTracks %>% data.frame %>% filter(Site == siteToTest, Round == r), aes(x = Easting, y = Northing)) + 
     geom_point(data = dataObtained %>% filter(RoundRemoved == r), aes(x = x, y = y), color = 'red') + 
     scale_fill_viridis(discrete = T) + 
-    ggtitle(paste0("Round ", r))
+    ggtitle(paste0("Round ", r)) + coord_map()
     
   )
   # dev.off()
@@ -192,6 +196,40 @@ print(popAvail)
 
 # maxT = 4; Round 0 : 3. 
 
+# Simpler sim to start ------------------------------------------------------------------------------------------------------------
+
+# Of 12B2 and 15A4, 102 sites were visited total. What happens if we a) visit 100 sites, and b) duplicate observations on seq(1,100) sites?
+
+gridsVisited = scaledGrid %>% sample_n(100, replace = F)
+
+# Number rounds
+maxR = 3
+
+# Possible visit counts; default is either visit once or twice. 
+posVis = c(1,2)
+
+data = simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = 0.5, maxR = maxR, posVis = posVis)
+
+encData = data$SampleData
+visData = data$GridVisitData
+
+prSpace = seq(0.1,1,length.out = 10)
+
+dataFull = lapply(X = prSpace, FUN = function(x){simScats_simple(gridsVisited = gridsVisited, propDup = x)})
+names(dataFull) = paste("Pr",prSpace)
+
+encArray = array(data = NA, dim = c(nrow(gridsVisited), length(encData), length(encData[[1]])))
+
+for(r in 1:maxR){
+  for(v in 1:max(posVis)){
+    ID = encData[[r]][[v]]$siteID
+    index = gridsVisited$ID %in% ID
+    encArray[index,r,v] = encData[[r]][[v]]$enc
+  }
+}
+
+y = encArray
+
 # JAGS preparation ----------------------------------------------------------------------------------------------------------------
 
 # Need to initialize the following:
@@ -205,16 +243,13 @@ print(popAvail)
 
 # Need to supply the following as data:
 
-# counts y[i,t], with the first column being 0's.
-# visits vis[i,t], with the first column being 0's. 
-# effort eff[i,t], with the first column being 0's.
+# counts y[i,t,v], with the first column being 0's.
+# visits vis[i,t,v], with the first column being 0's. 
 
 # Want to track the following parameters:
 
 # N_time
 # N_tot
-# a
-# b
 # theta
 # R
 # lambda
