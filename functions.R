@@ -413,44 +413,71 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
 
 # New ideas ----------------------------------------
 
-simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_recruit = 1, maxR = 3, posVis = c(1,2)){
+simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_recruit = 1, maxR = 3, posVis = c(1,2), p0 = 0.5){
   
-  gridsVisited$scats = rpois(n = nrow(gridsVisited), lambda = scats_avg)
+  # OOOOOK need to redo.
+  # N array of dim c(nrow(gridsVisited), maxR+1, maxV)
+  # y array of dim c(nrow(gridsVisited), maxR, maxV)
+  # theta matrix of dim ; c(nrow(gridsVisited), maxR)
   
-  gridsVisited$nVis = sample(x = c(1,2), size = nrow(gridsVisited), replace = T, prob = c(1-propDup, propDup))
+  # browser()
+  
+  # Variables
+  numSites = nrow(gridsVisited)
+  maxV = max(posVis)
+  
+  # Containers
+  N = array(NA, dim = c(numSites, maxR+1, maxV))
+  vis = y = array(0, dim = c(numSites, maxR+1, maxV))
+  theta = matrix(0, nrow = numSites, ncol = maxR+1)
+  
+  # Initial deposition
+  
+  N[,1,] = rpois(n = numSites, lambda = scats_avg)
   
   gridsVisitRec = list()
   gridsVisitRec[[1]] = gridsVisited
   
-  sample_rec = list()
-  
   for(r in 1:maxR){
     
-    gridsVisited$nVis = sample(x = posVis, size = nrow(gridsVisited), replace = T, prob = c(1-propDup, propDup))
+    # Roll for visit counts
+    gridsVisited$nVis = sample(x = posVis, size = numSites, replace = T, prob = c(1-propDup, propDup))
     
-    sample = list()
+    # Sum up scat population from previous pop, extra deposition, and removals
+    N[,r+1,1] = N[,r,maxV] + theta[,r] - y[,r,maxV] # looks good
+    
     sample_df = list()
     
     # Each pass, take some portion of scats.
     
-    for(v in 1:max(gridsVisited$nVis)){
-      gridsSampled = gridsVisited %>% filter(nVis >= v)
-      gridsSampled$sample = 0
-      sample[[v]] = rbinom(n = gridsSampled %>% nrow, size = gridsSampled$scats, prob = 0.5)
+    for(v in 1:maxV){
       
-      sample_df[[v]] = data.frame('enc' = sample[[v]], 'siteID' = gridsSampled$ID)
+      gridsSampled = gridsVisited %>% filter(nVis >= v)
       
       index = gridsVisited$ID %in% gridsSampled$ID
       
-      gridsVisited$scats[index] = gridsVisited$scats[index] - sample[[v]]
+      vis[index,r+1,v] = 1
+      
+      sample = rbinom(n = gridsSampled %>% nrow, size = N[index,r+1,v], prob = 0.5)
+      
+      y[index,r+1,v] = sample
+      
+      if(v < maxV){
+        N[index,r+1,v+1] = N[index,r+1,v] - sample
+        N[!index,r+1,v+1] = N[!index,r+1,v]
+      }
+      
+      
+      
     }
     
-    sample_rec[[r]] = sample_df
-      
+    theta[,r+1] = rpois(n = numSites, lambda = scats_recruit)
+    
     gridsVisitRec[[r+1]] = gridsVisited
+    
     
   }
   
-  return(list("SampleData" = sample_rec, "GridVisitData" = gridsVisitRec))
+  return(list("y" = y, "Deposition" = theta, "N" = N, 'vis' = vis, "GridVisitData" = gridsVisitRec))
   
 }

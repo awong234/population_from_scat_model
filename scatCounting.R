@@ -202,40 +202,48 @@ print(popAvail)
 
 gridsVisited = scaledGrid %>% sample_n(100, replace = F)
 
+nSites = nrow(gridsVisited)
+
 # Number rounds
 maxR = 3
 
 # Possible visit counts; default is either visit once or twice. 
 posVis = c(1,2)
 
-data = simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = 0.5, maxR = maxR, posVis = posVis)
+# Max number of visits
 
-encData = data$SampleData
-visData = data$GridVisitData
+maxV = max(posVis)
 
-prSpace = seq(0.1,1,length.out = 10)
+# Generate data
+data = simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = 0.5, maxR = maxR, posVis = posVis, p0 = 0.5)
 
-dataFull = lapply(X = prSpace, FUN = function(x){simScats_simple(gridsVisited = gridsVisited, propDup = x)})
+# Pull out
+y = data$y
+theta = data$Deposition
+vis = data$vis
+gridVisitData = data$GridVisitData
+N = data$N
+
+# Some summary stats
+
+popAvail = N[,,1] %>% colSums()
+
+# All potential duplications, from 10% to 100%. 
+prSpace = seq(0.01,1,length.out = 100)
+
+dataFull = lapply(X = prSpace, FUN = function(x){simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = x, maxR = maxR, posVis = posVis, p0 = 0.5)})
 names(dataFull) = paste("Pr",prSpace)
 
-encArray = array(data = NA, dim = c(nrow(gridsVisited), length(encData), length(encData[[1]])))
+maxT = maxR + 1
 
-for(r in 1:maxR){
-  for(v in 1:max(posVis)){
-    ID = encData[[r]][[v]]$siteID
-    index = gridsVisited$ID %in% ID
-    encArray[index,r,v] = encData[[r]][[v]]$enc
-  }
-}
 
-y = encArray
 
 # JAGS preparation ----------------------------------------------------------------------------------------------------------------
 
 # Need to initialize the following:
 
 # N1[i] ; initial deposition at sites visited.
-# N[i,t] ; population following t = 1, from 2 to 4.
+# N[i,t,v] ; population at each round, with duplicate visits indexed by v.
 # R[i,t] ; recruitment following t = 1. R[i,1] = 0.
 # p0[i,t] ; detection probability at site i, time t. p0[i,1] = 0. All other p0[i,2:maxT] = 0.8.
 
@@ -259,13 +267,12 @@ y = encArray
 
 # # # Jags input # # # 
 
-inits = function(){list(a = 0.00000001, b = 0.000001,
-                        R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
+inits = function(){list(R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
                         N1 = rowSums(y))}
 
-data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, eff = eff)
+data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV)
 
-params = c("N_time", 'a', 'b', "theta", "lambda")
+params = c("N_time", 'p00', "theta", "lambda")
 
 niter = 1e4
 nburn = niter/4
@@ -274,10 +281,11 @@ jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.fi
 
 jagsOut
 
-scats_init/nrow(scaledGrid) # Expected lambda
-recruit_rate / nrow(scaledGrid) # Expected theta
+# scats_init/nrow(scaledGrid) # Expected lambda
+# recruit_rate / nrow(scaledGrid) # Expected theta
 popAvail # N available per round
 
 jagsOut$mean$N_time
 jagsOut$mean$theta
 jagsOut$mean$lambda
+jagsOut$mean$p00

@@ -1,58 +1,63 @@
 model
 {
     # Priors
-    a ~ dunif(0,100) # Prior for alpha parameter. Controls location of how many fixes = 50% p(detect)
-    b ~ dunif(0,100) # Prior for beta parameter. Controls how steep the curve is, also affecting how many fixes = 50% p(detect), but also how sensitive p is to change in fixes.
-    # p00 ~ dunif(0,1)
+    p00 ~ dunif(0,1)
     theta0 ~ dnorm(0,0.01) #prior for theta
     beta0 ~ dnorm(0,0.01) #prior for lambda
     
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
-    lambda = exp(beta0)    
+    lambda = exp(beta0)
     theta = exp(theta0)
     
     for(i in 1:nSites){
 
-        # Need model for N's       
+        # Need model for N's
+        # This iteration of the model has a slightly different structure for N due to changes in simulation.
+        # Before, y_t ~ Bin(N_t-1, p)
+        # Now,    y_t ~ Bin(N_t, p)
         
         # First N (in time 0) is Poisson random
-        N1[i] ~ dpois(lambda) 
-        N[i,1] = N1[i]
+        N1[i] ~ dpois(lambda)
+
+        for(v in 1:maxV){
+            N[i,1,v] = N1[i]
+        }       
 
         # First recruitment (in time 0) is 0
         R[i,1] = 0
 
-        # First detection in time 0 is 0 (we didn't visit any sites in initial deposition).
-        p0[i,1] = 0
+        # First detection in time 0 is 0 (we didn't visit any sites in initial deposition). Unnecessary with vis[,,]
+        # p0[i,1,1:2] = 0
 
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.
         # Remember that y[i,t] is the t-1 visit, so it makes sense that N_t should be dependent upon what was found in the previous visit.
         for(t in 2:maxT){
-            R[i,t] ~ dpois(theta)
-            N[i,t] = N[i,t-1] + R[i,t] - y[i,t]
+            R[i,t] ~ dpois(theta) # Every round has some added deposition after we leave.
+            N[i,t,1] = N[i,t-1,2] - y[i,t-1,2] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
+            N[i,t,2] = N[i,t,1] - y[i,t,1] # Second visit to a sampling unit what's there is what was there after the first visit, minus what we picked up. 
         }
         
         # Observation likelihood. Counts are conditional on population size at previous time step (after recruits and removals), and detection (which also depends on having visited the site).
         for(t in 2:maxT){ 
+            for(v in 1:maxV){
 
-            # Detection
-            logit(p0[i,t]) = a + b*eff[i,t]
+                # Homogeneous detection
+                p0[i,t,v] = p00
 
-            # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8            
-            # vis is a matrix of binary indicators with '1' being 'visited', and '0' being 'not visited'. Multiply by p0 to fix 'not visited' sites to p = 0, and obtain a new matrix.
-            p[i,t] = p0[i,t] * vis[i,t]
+                # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8
+                # vis is a matrix of binary indicators with '1' being 'visited', and '0' being 'not visited'. Multiply by p0 to fix 'not visited' sites to p = 0, and obtain a new matrix.
+                p[i,t,v] = p0[i,t,v] * vis[i,t,v]
 
-            y[i,t] ~ dbin(p[i,t],N[i,t-1])
+                y[i,t,v] ~ dbin(p[i,t,v], N[i,t,v])
 
-            
+            }            
         }        
-       
 
     }
 
     for(t in 1:maxT){
-            N_time[t] = sum(N[,t])
+            N_time[t] = sum(N[,t,1])
         }
 
 }
