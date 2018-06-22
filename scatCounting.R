@@ -15,7 +15,7 @@
 
 # Required
 library(dplyr)
-library(foreach)
+library(doParallel)
 library(tidyr)
 library(rgdal)
 library(reshape2)
@@ -228,12 +228,6 @@ N = data$N
 
 popAvail = N[,,1] %>% colSums()
 
-# All potential duplications, from 10% to 100%. 
-prSpace = seq(0.01,1,length.out = 100)
-
-dataFull = lapply(X = prSpace, FUN = function(x){simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = x, maxR = maxR, posVis = posVis, p0 = 0.5)})
-names(dataFull) = paste("Pr",prSpace)
-
 maxT = maxR + 1
 
 
@@ -274,7 +268,7 @@ data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV)
 
 params = c("N_time", 'p00', "theta", "lambda")
 
-niter = 1e4
+niter = 1e5
 nburn = niter/4
 
 jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = F)
@@ -289,3 +283,45 @@ jagsOut$mean$N_time
 jagsOut$mean$theta
 jagsOut$mean$lambda
 jagsOut$mean$p00
+
+# # # JAGS over all combos of duplication, from 1% to 100% -------------------------------------------------------------------------------------
+
+# All potential duplications, from 10% to 100%. 
+dupSpace = seq(0.01,1, length.out = 20)
+
+# Some variation in density
+lamSpace = seq(0.1, 2, length.out = 5)
+
+# Some variation in p
+pSpace = rep(0.5, 5)
+
+combos = expand.grid(dupSpace, lamSpace, pSpace) %>% rename("probdup" = "Var1", "lam" = "Var2", 'p' = 'Var3')
+combos$ID = 1:nrow(combos)
+
+save('combos', file = 'combos_621.Rdata')
+
+# If we want to add more things to look at, append to combos here.
+
+# Pick 100 random sites.
+
+gridsVisited = scaledGrid %>% sample_n(100, replace = F)
+
+registerDoParallel(cores = detectCores()-1)
+
+# What's been done already? For restarts.
+
+filesExisting = list.files('jagsOut/', pattern = '.Rdata')
+
+iterComplete = filesExisting %>% regmatches(x = . , m = regexec(pattern = '\\d+', text = ., perl = T)) %>% as.integer
+
+seq_full = 1:nrow(combos)
+
+sequence = seq_full[!seq_full %in% iterComplete]
+
+# Do all the things!
+
+message(paste0('Started at ', Sys.time()))
+
+foreach(i = sequence, .packages = c("dplyr", "jagsUI")) %dopar% {
+  runFunc(comboSet = combos, iteration = i, gridsVisited = gridsVisited)
+}

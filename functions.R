@@ -458,7 +458,7 @@ simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_rec
       
       vis[index,r+1,v] = 1
       
-      sample = rbinom(n = gridsSampled %>% nrow, size = N[index,r+1,v], prob = 0.5)
+      sample = rbinom(n = gridsSampled %>% nrow, size = N[index,r+1,v], prob = p0)
       
       y[index,r+1,v] = sample
       
@@ -479,5 +479,98 @@ simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_rec
   }
   
   return(list("y" = y, "Deposition" = theta, "N" = N, 'vis' = vis, "GridVisitData" = gridsVisitRec))
+  
+}
+
+runFunc = function(comboSet, iteration, gridsVisited){
+  
+  nSites = nrow(gridsVisited)
+  
+  # Number rounds
+  maxR = 3
+  
+  # Possible visit counts; default is either visit once or twice. 
+  posVis = c(1,2)
+  
+  # Max number of visits
+  
+  maxV = max(posVis)
+  
+  
+  # # # # Simulation # # # #
+  data = simScats_simple(gridsVisited = gridsVisited, scats_avg = combos$lam[iteration], propDup = combos$probdup[iteration], maxR = maxR, posVis = posVis, p0 = 0.5)
+  # # # # # # # # # # # # # 
+  
+  # Pull out data
+  y = data$y
+  theta = data$Deposition
+  vis = data$vis
+  gridVisitData = data$GridVisitData
+  N = data$N
+  
+  popAvail = N[,,1] %>% colSums()
+  
+  maxT = maxR + 1
+  
+  inits = function(){list(R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
+                          N1 = rowSums(y))}
+  
+  data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV)
+  
+  params = c("N_time", 'p00', "theta", "lambda")
+  
+  niter = 1e5
+  nburn = niter/4
+  
+  jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+  
+  relevantData = jagsOut$summary
+  
+  allOut = list("N" = N,
+                "popAvail" = popAvail,
+                "y" = y,
+                "vis" = vis,
+                "output" = relevantData)
+  
+  save('allOut', file = paste0('jagsOut/out_', iteration,'.Rdata'))
+  
+  
+}
+
+# Output analysis -----------------------
+
+extract = function(what){invisible(Map(f = function(x,y){assign(x = x, value = y, pos = 1)}, x = names(what), y = what))}
+
+assessOutputs = function(f, file.list, analysisIDs, settings){
+  
+  load(file.list[f])
+  
+  analysisID = analysisIDs[f]
+  
+  extract(what = settings %>% filter(ID == analysisID) %>% select(probdup : p))
+  
+  extract(allOut)
+  
+  # Estimate bias
+  
+  N_diff = (output[1:4] - popAvail) / popAvail
+  
+  p_diff = (output[5] - p) / p
+  
+  theta_diff = (output[6] - 1)
+  
+  lambda_diff = (output[7] - lam) / lam
+  
+  # Estimate SD 
+  
+  sd = output[9:15]
+  
+  return(data.frame(Param = rownames(output)[1:7],
+                    Est = output[1:7],
+                    Diff = c(N_diff, p_diff, theta_diff, lambda_diff),
+                    SD = sd,
+                    lower95 = output[1:7,3],
+                    upper95 = output[1:7,7],
+                    ID = analysisID))
   
 }
