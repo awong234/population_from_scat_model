@@ -1,15 +1,52 @@
 # Setup --------------------------
 
+importGPX = function(startPath = NULL){
+  
+  # Function goes to the archive and copies over all of the .gpx files from
+  # COMPLETE paths. THEre are a bunch of incomplete paths, and they seem well
+  # marked in their respective folders. I will iterate through the directories
+  # and subdirectories and grab only those gpx files in non-incomplete folders.
+  
+  # Get folder structure to iterate through. ONly to be used on work computer
+  # due to hard location of archived data.
+  
+  if(is.null(startPath)){struct = 
+    dir('D:/MooseArchive/Field Data 2017 (Archive)/CK9Moose2017_Cornell-20180218T030010Z-001/CK9Moose2017_Cornell/Tracklogs/', 
+        pattern = '.gpx',
+        all.files = T, 
+        recursive = T, 
+        include.dirs = T,
+        full.names = T)}else{
+    struct = dir(startPath, 
+                 pattern = '.gpx',
+                 all.files = T, 
+                 recursive = T, 
+                 include.dirs = T,
+                 full.names = T)
+  }
+  
+  # Move files into trackLogs, ideally without the folder structure
+  
+  filesWant = grepl(pattern = "^((?!incomplete).)*(gpx)*$", x = struct, ignore.case = T, perl = T)
+  
+  file.copy(from = struct[filesWant], to = 'trackLogs/', recursive = F, overwrite = F)
+  
+  return(NULL)
+  
+}
+
 siteInfoFromFileName = function(path = NULL){
   
   if(is.null(path)){
     fileNames = list.files(pattern = '.gpx')
   }else{fileNames = list.files(path = path, pattern = '.gpx')}
   
-  siteNames = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+\\w\\d", text = ., perl = T))}
+  siteNames = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+[A-Z]\\d", text = ., perl = T))}
   siteDates = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.Date(format = '%m.%d.%y')
+  siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,2}_)(\\w{2})', text = ., perl = T))} %>% 
+    sapply(X = ., FUN = `[`, 3)
   
-  siteInfo = data.frame(SiteID = siteNames, Date = siteDates)
+  siteInfo = data.frame(SiteID = siteNames, Date = siteDates, Handler = siteHandler)
   
 }
 
