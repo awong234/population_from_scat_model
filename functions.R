@@ -41,8 +41,8 @@ siteInfoFromFileName = function(path = NULL){
     fileNames = list.files(pattern = '.gpx')
   }else{fileNames = list.files(path = path, pattern = '.gpx')}
   
-  siteNames = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+[A-Z]\\d", text = ., perl = T))}
-  siteDates = fileNames %>% {regmatches(x = ., m = regexpr(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.Date(format = '%m.%d.%y')
+  siteNames = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+[A-Z]\\d", text = ., perl = T))} %>% as.character()
+  siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character() %>% as.Date(format = '%m.%d.%y')
   siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,2}_)(\\w{2})', text = ., perl = T))} %>% 
     sapply(X = ., FUN = `[`, 3)
   
