@@ -79,14 +79,14 @@ reDate = function(data){
 
 # Gets gpx files from path, and assigns some information to it such as site ID, dates, based on function siteInfoFromFileName.
 
-getGPX = function(path = NULL, debug = F){
+getGPX = function(path = NULL, debug = F, debugLim = 10){
   
   if(is.null(path)){gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]}else{
     gpxFiles = dir(path = path, full.names = T)[grep(pattern = '.gpx', x = dir(path = path), perl = T)]
   }
   
   if(debug){
-    gpxFiles = gpxFiles[1:2]
+    gpxFiles = gpxFiles[1:debugLim]
   }
   
   # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
@@ -96,7 +96,7 @@ getGPX = function(path = NULL, debug = F){
   siteInfo = siteInfoFromFileName(path = path)
   
   if(debug){
-    siteInfo = siteInfo[1:2,]
+    siteInfo = siteInfo[1:debugLim,]
   }
   
   names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDates)
@@ -121,21 +121,19 @@ convertPoints = function(gpx, siteInfo){
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
     data.frame(gpx[[i]]@coords, 
                Site = siteInfo$siteID[i], 
-               Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
+               Date = gpx[[i]]@data$time %>% unique %>% as.Date, 
                Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T'),
                Handler = siteInfo$Handler[i]) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
   }
   
-  allPoints$Date = as.factor(allPoints$Date)
+  # allPoints$Date = as.factor(allPoints$Date)
   
   # Set dates to "round" equivalents. I.e. round 1, round 2, etc.
   
   allPoints = reDate(allPoints)
   
-  # allPoints = allPoints %>% mutate(Round = factor(ifelse(test = Date %in% c("2017-07-07", "2017-07-17"), yes = 1, 
-  #                                                        ifelse(test = Date %in% c("2017-07-30", "2017-07-28"), yes = 2, no = 3))),
-  #                                  RoundBySite = interaction(Site, Round))
+  allPoints = allPoints %>% mutate(RoundBySite = interaction(Site, Round))
   
   coordinates(allPoints) = ~Easting + Northing
   
