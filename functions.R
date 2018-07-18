@@ -88,15 +88,12 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
   
   if(debug){
     gpxFiles = gpxFiles[1:debugLim]
+    siteInfo = siteInfo[1:debugLim,]
   }
   
   # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
   out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
-  
-  if(debug){
-    siteInfo = siteInfo[1:debugLim,]
-  }
   
   names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDates)
   
@@ -120,7 +117,7 @@ convertPoints = function(gpx, siteInfo){
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
     data.frame(gpx[[i]]@coords, 
                Site = siteInfo$siteID[i], 
-               Date = gpx[[i]]@data$time %>% unique %>% as.Date, 
+               Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
                Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T'),
                Handler = siteInfo$Handler[i]) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
