@@ -64,14 +64,35 @@ reDate = function(data){
   data$Round = NA
   data$RoundNo = NA
   
-  for(i in 1:nrow(data)){
-    if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"; data$RoundNo[i] = 0}
-    if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17") {data$Round[i] = "Sample1";   data$RoundNo[i] = 1}
-    if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28") {data$Round[i] = "Sample2";   data$RoundNo[i] = 2}
-    if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07") {data$Round[i] = "Sample3";   data$RoundNo[i] = 3}
-    if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17") {data$Round[i] = "Sample4";   data$RoundNo[i] = 4}
-    if(data$Date[i] > "2017-08-17")                                {data$Round[i] = "Sample5";    data$RoundNo[i] = 5}
-  }
+  clearIndex = data$Date >= "2017-06-11" & data$Date <= "2017-07-05"
+  samp1 = data$Date > "2017-07-05" & data$Date <= "2017-07-17"
+  samp2 = data$Date > "2017-07-17" & data$Date <= "2017-07-28"
+  samp3 = data$Date > "2017-07-28" & data$Date <= "2017-08-07"
+  samp4 = data$Date > "2017-08-07" & data$Date <= "2017-08-17"
+  samp5 = data$Date > "2017-08-17"
+  
+  data$Round[clearIndex] = "Clearing"
+  data$Round[samp1] = "Sample1"
+  data$Round[samp2] = "Sample2"
+  data$Round[samp3] = "Sample3"
+  data$Round[samp4] = "Sample4"
+  data$Round[samp5] = "Sample5"
+  
+  data$RoundNo[clearIndex] = 0
+  data$RoundNo[samp1] = 1
+  data$RoundNo[samp2] = 2
+  data$RoundNo[samp3] = 3
+  data$RoundNo[samp4] = 4
+  data$RoundNo[samp5] = 5
+  
+  # for(i in 1:nrow(data)){
+  #   if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"; data$RoundNo[i] = 0}
+  #   if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17") {data$Round[i] = "Sample1";   data$RoundNo[i] = 1}
+  #   if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28") {data$Round[i] = "Sample2";   data$RoundNo[i] = 2}
+  #   if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07") {data$Round[i] = "Sample3";   data$RoundNo[i] = 3}
+  #   if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17") {data$Round[i] = "Sample4";   data$RoundNo[i] = 4}
+  #   if(data$Date[i] > "2017-08-17")                                {data$Round[i] = "Sample5";    data$RoundNo[i] = 5}
+  # }
   
   return(data)
   
@@ -129,7 +150,7 @@ convertPoints = function(gpx, siteInfo){
   
   allPoints = reDate(allPoints)
   
-  allPoints = allPoints %>% mutate(RoundBySite = interaction(Site, Round))
+  allPoints = allPoints %>% mutate(RoundBySite = paste0(Site, ".", Round))
   
   coordinates(allPoints) = ~Easting + Northing
   
@@ -250,13 +271,15 @@ trackFixesCount = function(track, gridLayer){
 
 points2line = function(points, ident){
   
-  browser()
-  
   if(class(points) != "SpatialPointsDataFrame"){stop("Points layer must be SpatialPointsDataFrame")}
   
-  layer_split = lapply(split(points, points@data[,ident]),function(x){Lines(list(Line(coordinates(x)[,c(1,2)])), x[,ident][1L])})
+  layer_split = split(points, points@data[,ident])
   
-  layer_lines = SpatialLines(layer_split)
+  layer_lines = lapply(layer_split, function(x){Lines(list(Line(coordinates(x)[,c(1,2)])), x@data[,ident][1])})
+  
+  browser()
+  
+  layer_lines = SpatialLines(layer_lines)
   
   data = data.frame(id = unique(singleT[,ident]))
   
