@@ -60,15 +60,16 @@ siteInfoFromFileName = function(path = NULL){
 
 reDate = function(data){
   
-  data$Day = as.Date(data$Date, format = '%m/%d/%Y')
+  data$Date = as.Date(data$Date, format = '%m/%d/%Y')
   data$Round = NA
   
   for(i in 1:nrow(data)){
-    if(data$Day[i] >= "2017-06-11" & data$Day[i] <= "2017-07-05"){data$Round[i] = "Clearing"}
-    if(data$Day[i] > "2017-07-05" & data$Day[i] <= "2017-07-17"){data$Round[i] = "Sample1"}
-    if(data$Day[i] > "2017-07-17" & data$Day[i] <= "2017-07-28"){data$Round[i] = "Sample2"}
-    if(data$Day[i] > "2017-07-28" & data$Day[i] <= "2017-08-07"){data$Round[i] = "Sample3"}
-    if(data$Day[i] > "2017-08-07"){data$Round[i] = "Sample4"}
+    if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"}
+    if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17"){data$Round[i] = "Sample1"}
+    if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28"){data$Round[i] = "Sample2"}
+    if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07"){data$Round[i] = "Sample3"}
+    if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17"){data$Round[i] = "Sample4"}
+    if(data$Date[i] > "2017-08-17")                              {data$Round[i] = "Sample5"}
   }
   
   return(data)
@@ -76,17 +77,27 @@ reDate = function(data){
 }
 
 
-getGPX = function(path = NULL){
+# Gets gpx files from path, and assigns some information to it such as site ID, dates, based on function siteInfoFromFileName.
+
+getGPX = function(path = NULL, debug = F){
   
   if(is.null(path)){gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]}else{
     gpxFiles = dir(path = path, full.names = T)[grep(pattern = '.gpx', x = dir(path = path), perl = T)]
   }
   
-  gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
+  if(debug){
+    gpxFiles = gpxFiles[1:2]
+  }
+  
+  # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
   out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
   
   siteInfo = siteInfoFromFileName(path = path)
+  
+  if(debug){
+    siteInfo = siteInfo[1:2,]
+  }
   
   names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDates)
   
@@ -120,9 +131,11 @@ convertPoints = function(gpx, siteInfo){
   
   # Set dates to "round" equivalents. I.e. round 1, round 2, etc.
   
-  allPoints = allPoints %>% mutate(Round = factor(ifelse(test = Date %in% c("2017-07-07", "2017-07-17"), yes = 1, 
-                                                         ifelse(test = Date %in% c("2017-07-30", "2017-07-28"), yes = 2, no = 3))),
-                                   RoundBySite = interaction(Site, Round))
+  allPoints = reDate(allPoints)
+  
+  # allPoints = allPoints %>% mutate(Round = factor(ifelse(test = Date %in% c("2017-07-07", "2017-07-17"), yes = 1, 
+  #                                                        ifelse(test = Date %in% c("2017-07-30", "2017-07-28"), yes = 2, no = 3))),
+  #                                  RoundBySite = interaction(Site, Round))
   
   coordinates(allPoints) = ~Easting + Northing
   
