@@ -277,11 +277,22 @@ points2line = function(points, ident){
   
   layer_lines = lapply(layer_split, function(x){Lines(list(Line(coordinates(x)[,c(1,2)])), x@data[,ident][1])})
   
-  browser()
-  
   layer_lines = SpatialLines(layer_lines)
   
-  data = data.frame(id = unique(singleT[,ident]))
+  # browser()
+  
+  ref = rle(points@data$RoundBySite)
+  
+  sites = points@data %>% group_by_(eval(ident)) %>% summarise(Site = first(Site))
+  dates = points@data %>% group_by_(eval(ident)) %>% summarise(Date = first(Date))
+  rounds = points@data %>% group_by_(eval(ident)) %>% summarise(Round = first(Round))
+  roundsNo = points@data %>% group_by_(eval(ident)) %>% summarise(RoundNo = first(RoundNo))
+  
+  data = data.frame(id = ref$values,
+                    Site = sites,
+                    Date = dates,
+                    Round = rounds,
+                    RoundNo = roundsNo)
   
   rownames(data) = data$id
   
