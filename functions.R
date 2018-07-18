@@ -289,10 +289,10 @@ points2line = function(points, ident){
   roundsNo = points@data %>% group_by_(eval(ident)) %>% summarise(RoundNo = first(RoundNo))
   
   data = data.frame(id = ref$values,
-                    Site = sites,
-                    Date = dates,
-                    Round = rounds,
-                    RoundNo = roundsNo)
+                    Site = sites$Site,
+                    Date = dates$Date,
+                    Round = rounds$Round,
+                    RoundNo = roundsNo$RoundNo)
   
   rownames(data) = data$id
   
