@@ -45,6 +45,8 @@ if(!"trackPoints.Rdata" %in% dir()){
   
 }
 
+
+
 # Import observations. 
 
 scatLocs = read.csv(file = 'cleanedAllScatData.csv', stringsAsFactors = F)
@@ -100,30 +102,37 @@ scatLocs = scatLocs[!datesLogic,] # Get rid of the ones without a corresponding 
 
 # Track & scat overlay ------------------------------------------------------------------------------------------------------------------
 
-# There should *always* be a track within the vicinity of a scat. See if there are any scats > 100m from a track. Use rgeos::gDistance to get the smallest distance from scat to track. 
+# There should *always* be a track within the vicinity of a scat. See if there are any scats > 100m from a track. Use rgeos::gDistance to get the smallest distance from scat to track.
 
-allScatDists = vector(mode = 'numeric', length = nrow(scatLocs))
+# NOT RUN
 
+skip = T
 
-for(i in 1:nrow(scatLocs)){
+if(!skip){
   
-  allScatDists[i] = scatDists(scatLocs[i,], tracks_points)
+  allScatDists = vector(mode = 'numeric', length = nrow(scatLocs))
+  
+  
+  for(i in 1:nrow(scatLocs)){
+    
+    allScatDists[i] = scatDists(scatLocs[i,], tracks_points)
+    
+  }
+  
+  scatLocs[which(allScatDists > 100),]
+  
+  # What's wrong with 6C1? 
+  
+  scats_6C1 = scatLocs %>% data.frame %>% filter(Site == '06C1')
+  tracks_6C1 = tracks_points %>% data.frame %>% filter(Site == '06C1')
+  
+  
+  ggplot() + 
+    geom_point(data = scats_6C1, aes(x = Longitude, y = Latitude, color = Date)) + 
+    geom_path(data = tracks_6C1, aes(x = Easting, y = Northing, color = Date)) + 
+    coord_equal()
   
 }
-
-scatLocs[which(allScatDists > 100),]
-
-# What's wrong with 6C1? 
-
-scats_6C1 = scatLocs %>% data.frame %>% filter(Site == '06C1')
-tracks_6C1 = tracks_points %>% data.frame %>% filter(Site == '06C1')
-
-
-ggplot() + 
-  geom_point(data = scats_6C1, aes(x = Longitude, y = Latitude, color = Date)) + 
-  geom_path(data = tracks_6C1, aes(x = Easting, y = Northing, color = Date)) + 
-  coord_equal()
-
 # ONE OF THE SITES MISLABELED. EXPORT TO ARCGIS AND PERFORM SPATIAL JOIN WITH
 # ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT ---------------------------
 
