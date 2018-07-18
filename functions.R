@@ -62,14 +62,15 @@ reDate = function(data){
   
   data$Date = as.Date(data$Date, format = '%m/%d/%Y')
   data$Round = NA
+  data$RoundNo = NA
   
   for(i in 1:nrow(data)){
-    if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"}
-    if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17"){data$Round[i] = "Sample1"}
-    if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28"){data$Round[i] = "Sample2"}
-    if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07"){data$Round[i] = "Sample3"}
-    if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17"){data$Round[i] = "Sample4"}
-    if(data$Date[i] > "2017-08-17")                              {data$Round[i] = "Sample5"}
+    if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"; data$RoundNo[i] = 0}
+    if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17") {data$Round[i] = "Sample1";   data$RoundNo[i] = 1}
+    if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28") {data$Round[i] = "Sample2";   data$RoundNo[i] = 2}
+    if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07") {data$Round[i] = "Sample3";   data$RoundNo[i] = 3}
+    if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17") {data$Round[i] = "Sample4";   data$RoundNo[i] = 4}
+    if(data$Date[i] > "2017-08-17")                                {data$Round[i] = "Sample5";    data$RoundNo[i] = 5}
   }
   
   return(data)
