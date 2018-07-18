@@ -1,4 +1,10 @@
+require(rgdal)
+require(doParallel)
+require(dplyr)
+require(rgeos)
+
 # Setup --------------------------
+
 
 importGPX = function(startPath = NULL){
   
@@ -46,7 +52,7 @@ siteInfoFromFileName = function(path = NULL){
   siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,2}_)(\\w{2})', text = ., perl = T))} %>% 
     sapply(X = ., FUN = `[`, 3)
   
-  siteInfo = data.frame(SiteID = siteNames, Date = siteDates, Handler = siteHandler)
+  siteInfo = data.frame(siteID = siteNames, Date = siteDates, Handler = siteHandler)
   
 }
 
@@ -73,16 +79,16 @@ reDate = function(data){
 getGPX = function(path = NULL){
   
   if(is.null(path)){gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]}else{
-    gpxFiles = dir(path = path)[grep(pattern = '.gpx', x = dir(), perl = T)]
+    gpxFiles = dir(path = path, full.names = T)[grep(pattern = '.gpx', x = dir(path = path), perl = T)]
   }
   
   gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
-  if(!exists("out", where = .GlobalEnv)){
-    out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
-  }
+  out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
   
-  names(out) = gpxFiles
+  siteInfo = siteInfoFromFileName(path = path)
+  
+  names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDates)
   
   # Convert to UTM for easy grid creation.
   
@@ -94,15 +100,19 @@ getGPX = function(path = NULL){
 
 # Point utilities ----------------------------------------------------------------------
 
+# Takes gpx files, makes a SpatialPointsDataFrame from it. 
+# Formats dates properly, adds 'Round', and 'RoundBySite' for ID purposes.
+
 convertPoints = function(gpx, siteInfo){
   
-  sites = siteInfo$SiteID %>% as.character()
+  sites = siteInfo$siteID %>% as.character()
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
     data.frame(gpx[[i]]@coords, 
-               Site = sites[i], 
+               Site = siteInfo$siteID[i], 
                Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
-               Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')) %>% 
+               Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T'),
+               Handler = siteInfo$Handler[i]) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
   }
   
@@ -228,6 +238,26 @@ trackFixesCount = function(track, gridLayer){
   fixesPerCell = track$gridID %>% table %>% as.data.frame() %>% rename(gridID = '.') %>% mutate(gridID = as.integer(as.character(gridID)))
   
   return(fixesPerCell)
+  
+}
+
+points2line = function(points, ident){
+  
+  browser()
+  
+  if(class(points) != "SpatialPointsDataFrame"){stop("Points layer must be SpatialPointsDataFrame")}
+  
+  layer_split = lapply(split(points, points@data[,ident]),function(x){Lines(list(Line(coordinates(x)[,c(1,2)])), x[,ident][1L])})
+  
+  layer_lines = SpatialLines(layer_split)
+  
+  data = data.frame(id = unique(singleT[,ident]))
+  
+  rownames(data) = data$id
+  
+  out = SpatialLinesDataFrame(layer_lines, data)
+  
+  return(out)
   
 }
 
@@ -521,6 +551,8 @@ simScats_simple = function(gridsVisited, scats_avg = 5, propDup = 0.5, scats_rec
 
 runFunc = function(comboSet, iteration, gridsVisited){
   
+  # Given a set of combinations of settings, pass each row in here to simulate and analyze.
+  
   nSites = nrow(gridsVisited)
   
   # Number rounds
@@ -573,6 +605,20 @@ runFunc = function(comboSet, iteration, gridsVisited){
   
   
 }
+
+scatDists = function(scatPos, trackLocs){
+  
+  # Want to use rgeos::gDistance, but limit search to tracks in same day & site as the scat. 
+  
+  site = scatPos$Site
+  date = scatPos$Date
+  
+  tpoints_local = trackLocs[trackLocs$Site == site & trackLocs$Date == date,]
+  
+  return(rgeos::gDistance(scatPos, tpoints_local))
+  
+}
+
 
 # Output analysis -----------------------
 
