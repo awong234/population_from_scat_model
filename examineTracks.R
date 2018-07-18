@@ -141,8 +141,8 @@ if(!skip){
   
   
   ggplot() + 
-    geom_point(data = scats_6C1, aes(x = Longitude, y = Latitude, color = Date)) + 
-    geom_path(data = tracks_6C1, aes(x = Easting, y = Northing, color = Date)) + 
+    geom_point(data = scats_6C1, aes(x = Longitude, y = Latitude, color = Date %>% factor)) + 
+    geom_path(data = tracks_6C1, aes(x = Easting, y = Northing, color = Date %>% factor)) + 
     coord_equal()
   
 }
@@ -152,4 +152,18 @@ if(!skip){
 
 tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
 
-rgdal::writeOGR(obj = tracks_points, dsn = 'gpxTracksExport2017/', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
+proj4string(tracks_lines) = proj4string(tracks_points)
+
+sites = tracks_points@data$Site %>% unique
+
+siteIndex = 1
+
+tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>% 
+  ggplot() + 
+    geom_path(aes(x = long, y = lat, group = group)) + 
+    geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
+
+siteIndex = siteIndex + 1
+
+rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
+
