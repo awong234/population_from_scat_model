@@ -28,7 +28,7 @@ names = list.files(path = 'trackLogs/')
 
 if(!"trackPoints.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs/', debug = T)
+  tracks = getGPX(path = 'trackLogs/', debug = F)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
   save('tracks_points', file = 'trackPoints.Rdata')
