@@ -80,7 +80,7 @@ reDate = function(data){
 
 # Gets gpx files from path, and assigns some information to it such as site ID, dates, based on function siteInfoFromFileName.
 
-getGPX = function(path = NULL, debug = F, debugLim = 10){
+getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
   
   if(is.null(path)){gpxFiles = dir()[grep(pattern = '.gpx', x = dir(), perl = T)]}else{
     gpxFiles = dir(path = path, full.names = T)[grep(pattern = '.gpx', x = dir(path = path), perl = T)]
@@ -93,8 +93,6 @@ getGPX = function(path = NULL, debug = F, debugLim = 10){
   # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
   out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
-  
-  siteInfo = siteInfoFromFileName(path = path)
   
   if(debug){
     siteInfo = siteInfo[1:debugLim,]
