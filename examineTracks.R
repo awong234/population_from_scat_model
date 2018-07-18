@@ -24,13 +24,13 @@ library(ggplot2)
 
 names = list.files(path = 'trackLogs/')
 
-siteInfo = data.frame(siteID = siteNames, Date = siteDates, Handler = siteHandler) 
+siteInfo = siteInfoFromFileName(path = 'trackLogs/') 
 
 # Only reload all tracks if the .Rdata file somehow gets lost.
 
 if(!"trackPoints.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs/', siteInfo = siteInfo, debug = T, debugLim = 2)
+  tracks = getGPX(path = 'trackLogs/', siteInfo = siteInfo)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
   save('tracks_points', file = 'trackPoints.Rdata')
