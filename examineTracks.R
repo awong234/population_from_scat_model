@@ -1,10 +1,21 @@
+# Intention is to look at the collections and the tracks to see 
+
+# A) how many grid cells are duplicated per track
+# B) Of those, how many have collections on the first, and/or second duplication
+
+# This is necessary to observe the potential of the pseudo-replication method.
+
+# CLEANING TO BE DONE
+
+# Some transects are mislabeled.
+# At the moment, the RoundBySiteID is wrong. Fixing now.
+
 source('functions.R')
 
 library(dplyr)
 library(rgdal)
 library(sp)
 library(ggplot2)
-library(iterators)
 
 # Setup ------------------------------------------------------------------------------------------------------------------------
 
@@ -13,13 +24,11 @@ library(iterators)
 
 names = list.files(path = 'trackLogs/')
 
-siteInfo = siteInfoFromFileName(path = 'trackLogs/')
-
 # Only reload all tracks if the .Rdata file somehow gets lost.
 
 if(!"trackPoints.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs/')
+  tracks = getGPX(path = 'trackLogs/', debug = T)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
   save('tracks_points', file = 'trackPoints.Rdata')
@@ -114,7 +123,7 @@ ggplot() +
   coord_equal()
 
 # ONE OF THE SITES MISLABELED. EXPORT TO ARCGIS AND PERFORM SPATIAL JOIN WITH
-# ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT
+# ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT ---------------------------
 
 tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
 
