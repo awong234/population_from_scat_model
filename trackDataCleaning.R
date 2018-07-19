@@ -35,12 +35,12 @@ importGPX()
 # 10B5-2017-08-11 should be 10B3.
 # 12A6-2017-07-09 should be 12A4.
 
-file.rename(from = 'trackLogs/06C1_08.27.17_JL.gpx', to = 'trackLogs/06C2_08.27.17_JL_correct.gpx')
-file.rename(from = 'trackLogs/06C2_08.27.17_JL.gpx', to = 'trackLogs/06C1_08.27.17_JL_correct.gpx')
-file.rename(from = 'trackLogs/08B3_8.15.17_SM.gpx', to = 'trackLogs/08B4_8.15.17_SM_correct.gpx')
-file.rename(from = 'trackLogs/08B4_8.15.17_SM.gpx', to = 'trackLogs/08B3_8.15.17_SM_correct.gpx')
-file.rename(from = 'trackLogs/10B5_08.11.17_JL.gpx', to = 'trackLogs/10B3_08.11.17_JL_correct.gpx')
-file.rename(from = 'trackLogs/12A6_07.09.17_SM.gpx', to = 'trackLogs/12A4_07.09.17_SM_correct.gpx')
+file.rename(from = 'trackLogs_2017/06C1_08.27.17_JL.gpx', to = 'trackLogs_2017/06C2_08.27.17_JL_correct.gpx')
+file.rename(from = 'trackLogs_2017/06C2_08.27.17_JL.gpx', to = 'trackLogs_2017/06C1_08.27.17_JL_correct.gpx')
+file.rename(from = 'trackLogs_2017/08B3_8.15.17_SM.gpx', to = 'trackLogs_2017/08B4_8.15.17_SM_correct.gpx')
+file.rename(from = 'trackLogs_2017/08B4_8.15.17_SM.gpx', to = 'trackLogs_2017/08B3_8.15.17_SM_correct.gpx')
+file.rename(from = 'trackLogs_2017/10B5_08.11.17_JL.gpx', to = 'trackLogs_2017/10B3_08.11.17_JL_correct.gpx')
+file.rename(from = 'trackLogs_2017/12A6_07.09.17_SM.gpx', to = 'trackLogs_2017/12A4_07.09.17_SM_correct.gpx')
 
 # A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles.
 
@@ -50,7 +50,7 @@ file.rename(from = 'trackLogs/12A6_07.09.17_SM.gpx', to = 'trackLogs/12A4_07.09.
 
 if(!"trackPoints.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs/', siteInfo = siteInfo)
+  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
   save('tracks_points', file = 'trackPoints.Rdata')
