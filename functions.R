@@ -6,7 +6,7 @@ require(rgeos)
 # Setup --------------------------
 
 
-importGPX = function(startPath = NULL){
+importGPX = function(startPath = NULL, outPath){
   
   # Function goes to the archive and copies over all of the .gpx files from
   # COMPLETE paths. THEre are a bunch of incomplete paths, and they seem well
@@ -22,7 +22,8 @@ importGPX = function(startPath = NULL){
         all.files = T, 
         recursive = T, 
         include.dirs = T,
-        full.names = T)}else{
+        full.names = T)
+  } else {
     struct = dir(startPath, 
                  pattern = '.gpx',
                  all.files = T, 
@@ -30,12 +31,12 @@ importGPX = function(startPath = NULL){
                  include.dirs = T,
                  full.names = T)
   }
-  
+  browser()
   # Move files into trackLogs, ideally without the folder structure
   
-  filesWant = grepl(pattern = "^((?!incomplete).)*(gpx)*$", x = struct, ignore.case = T, perl = T)
+  filesWant = grepl(pattern = "^((?!hum).)*(gpx)*$", x = struct, ignore.case = T, perl = T)
   
-  file.copy(from = struct[filesWant], to = 'trackLogs/', recursive = F, overwrite = F)
+  file.copy(from = struct[filesWant], to = outPath, recursive = F, overwrite = F)
   
   return(NULL)
   
@@ -51,8 +52,9 @@ siteInfoFromFileName = function(path = NULL){
   siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character() %>% as.Date(format = '%m.%d.%y')
   siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,2}_)(\\w{2})', text = ., perl = T))} %>% 
     sapply(X = ., FUN = `[`, 3)
+  error = fileNames %>% {regmatches(x = ., m = regexec(pattern = '^((?!inc|shar).)*(gpx)$', text = ., perl = T))}
   
-  siteInfo = data.frame(siteID = siteNames, Date = siteDates, Handler = siteHandler)
+  siteInfo = data.frame(siteID = siteNames, Date = siteDates, Handler = siteHandler, Error = error)
   
 }
 
