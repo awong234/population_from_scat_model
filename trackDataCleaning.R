@@ -20,7 +20,10 @@ library(ggplot2)
 # Setup ------------------------------------------------------------------------------------------------------------------------
 
 # Import gpx files that AREN't incomplete.
-importGPX()
+# importGPX(outPath = 'trackLogs_2017/') # default import from 2017 folder
+# importGPX(startPath = 'D:/MooseArchive/Field Data 2016 (Archive)/Moose 2016/Dog Tracklogs/', outPath = 'trackLogs_2016/') # import from 2016 folder
+
+
 
 # Initial Cleaning 2017 data ------------------------------------------------------------------------------------------------------------------------
 
@@ -42,24 +45,31 @@ file.rename(from = 'trackLogs_2017/08B4_8.15.17_SM.gpx', to = 'trackLogs_2017/08
 file.rename(from = 'trackLogs_2017/10B5_08.11.17_JL.gpx', to = 'trackLogs_2017/10B3_08.11.17_JL_correct.gpx')
 file.rename(from = 'trackLogs_2017/12A6_07.09.17_SM.gpx', to = 'trackLogs_2017/12A4_07.09.17_SM_correct.gpx')
 
-# A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles.
+# Metadata
 
+names = list.files(path = 'trackLogs_2017/') 
 
+siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
+
+# A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles. Delete from set
+
+file.remove('trackLogs_2017/07.16-20.17_JL.gpx')
+file.remove('trackLogs_2017/07.22-25.17_JL.gpx')
 
 # Only reload all tracks if the .Rdata file somehow gets lost.
 
-if(!"trackPoints.Rdata" %in% dir()){
+if(!"trackPoints_2017.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo)
+  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = T)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
-  save('tracks_points', file = 'trackPoints.Rdata')
+  save('tracks_points', file = 'trackPoints_2017.Rdata')
   
 } else {
   
   if(!exists("tracks_points")){
     
-    load('trackPoints.Rdata')
+    load('trackPoints_2017.Rdata')
     
   }
   
@@ -172,20 +182,28 @@ if(!skip){
 # # ONE OF THE SITES MISLABELED. EXPORT TO ARCGIS AND PERFORM SPATIAL JOIN WITH
 # # ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT ---------------------------
 # 
-# tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
-# 
-# proj4string(tracks_lines) = proj4string(tracks_points)
-# 
-# sites = tracks_points@data$Site %>% unique
-# 
-# siteIndex = 1
-# 
-# tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>% 
-#   ggplot() + 
-#     geom_path(aes(x = long, y = lat, group = group)) + 
-#     geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
-# 
-# siteIndex = siteIndex + 1
-# 
-# rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
+tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
+
+proj4string(tracks_lines) = proj4string(tracks_points)
+
+sites = tracks_points@data$Site %>% unique
+
+siteIndex = 1
+
+tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>%
+  ggplot() +
+    geom_path(aes(x = long, y = lat, group = group)) +
+    geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
+
+siteIndex = siteIndex + 1
+
+rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+
+
+# Initial cleaning 2016 Data ------------------------------------------------------------------------------------------------------------------------
 
