@@ -20,11 +20,31 @@ library(ggplot2)
 # Setup ------------------------------------------------------------------------------------------------------------------------
 
 # Import gpx files that AREN't incomplete.
-# importGPX() 
+importGPX()
 
-names = list.files(path = 'trackLogs/')
+# Initial Cleaning 2017 data ------------------------------------------------------------------------------------------------------------------------
 
-siteInfo = siteInfoFromFileName(path = 'trackLogs/') 
+# There were some errors in naming, found in commented section below. Fix these HERE, explicitly.
+
+# MISLABELS
+
+# 06C1-2017-08-27 should be 06C2. 
+# 06C2-2017-08-27 should be 06C1.
+# 08B3-2017-08-15 should be 08B4.
+# 08B4-2017-08-15 should be 08B3.
+# 10B5-2017-08-11 should be 10B3.
+# 12A6-2017-07-09 should be 12A4.
+
+file.rename(from = 'trackLogs/06C1_08.27.17_JL.gpx', to = 'trackLogs/06C2_08.27.17_JL_correct.gpx')
+file.rename(from = 'trackLogs/06C2_08.27.17_JL.gpx', to = 'trackLogs/06C1_08.27.17_JL_correct.gpx')
+file.rename(from = 'trackLogs/08B3_8.15.17_SM.gpx', to = 'trackLogs/08B4_8.15.17_SM_correct.gpx')
+file.rename(from = 'trackLogs/08B4_8.15.17_SM.gpx', to = 'trackLogs/08B3_8.15.17_SM_correct.gpx')
+file.rename(from = 'trackLogs/10B5_08.11.17_JL.gpx', to = 'trackLogs/10B3_08.11.17_JL_correct.gpx')
+file.rename(from = 'trackLogs/12A6_07.09.17_SM.gpx', to = 'trackLogs/12A4_07.09.17_SM_correct.gpx')
+
+# A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles.
+
+
 
 # Only reload all tracks if the .Rdata file somehow gets lost.
 
@@ -147,23 +167,25 @@ if(!skip){
   
 }
 
-# ONE OF THE SITES MISLABELED. EXPORT TO ARCGIS AND PERFORM SPATIAL JOIN WITH
-# ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT ---------------------------
-
-tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
-
-proj4string(tracks_lines) = proj4string(tracks_points)
-
-sites = tracks_points@data$Site %>% unique
-
-siteIndex = 1
-
-tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>% 
-  ggplot() + 
-    geom_path(aes(x = long, y = lat, group = group)) + 
-    geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
-
-siteIndex = siteIndex + 1
-
-rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
+# # Deprecated - problems fixed above
+# 
+# # ONE OF THE SITES MISLABELED. EXPORT TO ARCGIS AND PERFORM SPATIAL JOIN WITH
+# # ORIGINAL TRANSECT LINES TO CORRECTLY IDENTIFY AND THEN RE-EXPORT ---------------------------
+# 
+# tracks_lines = points2line(tracks_points, ident = 'RoundBySite')
+# 
+# proj4string(tracks_lines) = proj4string(tracks_points)
+# 
+# sites = tracks_points@data$Site %>% unique
+# 
+# siteIndex = 1
+# 
+# tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>% 
+#   ggplot() + 
+#     geom_path(aes(x = long, y = lat, group = group)) + 
+#     geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
+# 
+# siteIndex = siteIndex + 1
+# 
+# rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
 
