@@ -40,10 +40,11 @@ library(ggplot2)
 
 file.rename(from = 'trackLogs_2017/06C1_08.27.17_JL.gpx', to = 'trackLogs_2017/06C2_08.27.17_JL_correct.gpx')
 file.rename(from = 'trackLogs_2017/06C2_08.27.17_JL.gpx', to = 'trackLogs_2017/06C1_08.27.17_JL_correct.gpx')
-file.rename(from = 'trackLogs_2017/08B3_8.15.17_SM.gpx', to = 'trackLogs_2017/08B4_8.15.17_SM_correct.gpx')
-file.rename(from = 'trackLogs_2017/08B4_8.15.17_SM.gpx', to = 'trackLogs_2017/08B3_8.15.17_SM_correct.gpx')
+# file.rename(from = 'trackLogs_2017/08B3_8.15.17_SM.gpx', to = 'trackLogs_2017/08B4_8.15.17_SM_correct.gpx')
+# file.rename(from = 'trackLogs_2017/08B4_8.15.17_SM.gpx', to = 'trackLogs_2017/08B3_8.15.17_SM_correct.gpx')
 file.rename(from = 'trackLogs_2017/10B5_08.11.17_JL.gpx', to = 'trackLogs_2017/10B3_08.11.17_JL_correct.gpx')
 file.rename(from = 'trackLogs_2017/12A6_07.09.17_SM.gpx', to = 'trackLogs_2017/12A4_07.09.17_SM_correct.gpx')
+file.rename(from = 'trackLogs_2017/12A6_07.10.17_JL.gpx', to = 'trackLogs_2017/12A4_07.10.17_JL_correct.gpx')
 
 # A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles. Delete from set
 
@@ -58,7 +59,7 @@ siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
 
 if(!"trackPoints_2017.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = F)
+  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = T)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' # May not be necessary if done in-function.
   save('tracks_points', file = 'trackPoints_2017.Rdata')
@@ -72,6 +73,8 @@ if(!"trackPoints_2017.Rdata" %in% dir()){
   }
   
 }
+
+# Fix 12A6 site that leaks into 12A4.
 
 # Import observations. 
 
@@ -183,14 +186,36 @@ proj4string(tracks_lines) = proj4string(tracks_points)
 
 sites = tracks_points@data$Site %>% unique
 
-siteIndex = 1
+siteIndex = which(sites == '12A4')
 
 tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>%
   ggplot() +
     geom_path(aes(x = long, y = lat, group = group)) +
-    geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character))
+    geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character)) + 
+    geom_point(data = scatLocs %>% data.frame %>% filter(Site == sites[siteIndex]), aes(x = Longitude, y = Latitude), color = 'red') +
+    coord_equal()
 
 siteIndex = siteIndex + 1
+
+# In depth look
+
+sitesByRound = tracks_lines %>% fortify %>% filter(grepl(id, pattern = '12A6')) %>% pull(id) %>% unique
+
+siteIndex = 0
+
+siteIndex = siteIndex + 1
+
+tracks_lines %>% fortify %>% filter(grepl(id, pattern = sitesByRound[siteIndex] %>% as.character)) %>% 
+  ggplot() +
+  geom_path(aes(x = long, y = lat, group = group)) +
+  geom_text(aes(x = min(long), y = min(lat), label = sitesByRound[siteIndex] %>% as.character)) + 
+  coord_equal()
+
+tracks_lines@data %>% filter(id == sitesByRound[siteIndex])
+
+list.files(path = 'trackLogs_2017/', pattern = '12A4|12A6')
+
+# Export to shapefile 
 
 rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
 
