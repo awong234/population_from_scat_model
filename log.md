@@ -1,6 +1,15 @@
 # 2018-07-20
 
+FUCKING JAKE
+
 Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
+
+- [x] 08B3 and 08B4 still mislabeled. Looks like two sites each that weren't picked up by the GIS.
+    * Maybe renaming was unnecessary. Testing without rename.
+- [x] One site 12A4 mislabeled as 12A6. 
+    * Part of 12A6 (one of the multitracks exports) belongs to 12A4. This is from `12A6_07.10.17_JL.gpx`. 
+    * Rename to `12A4_07.10.17_JL.gpx`.
+- [ ] Part of `12A6_07.09.17_SM.gpx` should be 12A4. Need to separate out.
 
 # 2018-07-19
 
@@ -11,9 +20,9 @@ GPS errors in 2017 data fixed, some of the export errors made by JL fixed. Next 
 Workflow: 
 
 1. Fix inconsistencies in naming, split out files exported incorrectly.
-1. Assemble point data together in R with the same metadata
-2. Trim off GPS errors in ArcMap
-3. Re-export for final use
+2. Assemble point data together in R with the same metadata
+3. Trim off GPS errors in ArcMap
+4. Re-export for final use
 
 * Work on cleaning 2016 tracks, and do the same.
 
