@@ -22,6 +22,11 @@ Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far aw
 * Made a number of edits to layer to fix GPS error, and points obviously out of search area. Original kept. 
 * Renamed '08B4.Sample4' and '08B4.Sample5' to 08B3, each.
 * Renamed '08B3.Sample4' and '08B3.Sample5' to 08B4, each.
+* **Exported cleaned data, copy exists in Analysis.gdb**
+
+## 2016 tracks
+
+
 
 # 2018-07-19
 
