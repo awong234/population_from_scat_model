@@ -63,44 +63,66 @@ siteInfoFromFileName = function(path = NULL){
 
 # Reformats data dates properly and includes definition of sampling rounds.
 
-reDate = function(data){
+reDate = function(data, year){
   
-  data$Date = tryCatch(as.Date(data$Date, format = '%m/%d/%Y'),
-                       error = function(m){as.Date(data$Date, origin = '1970-01-01')})
-  data$Round = NA
-  data$RoundNo = NA
+  if(year == 2016){
+    
+    data$Date = tryCatch(as.Date(data$Date, format = '%m/%d/%Y'),
+                         error = function(m){as.Date(data$Date, origin = '1970-01-01')})
+
+    data$Round = NA
+    data$RoundNo = NA
+
+    clearIndex = data$Date <= "2016-06-28"
+    samp1 = data$Date > "2016-06-28" & data$Date <= "2016-07-17"
+    samp2 = data$Date > "2017-07-17" & data$Date <= "2017-08-06"
+    samp3 = data$Date > "2017-08-06"
+    
+    data$Round[clearIndex] = "Clearing"
+    data$Round[samp1] = "Sample1"
+    data$Round[samp2] = "Sample2"
+    data$Round[samp3] = "Sample3"
+    
+    data$RoundNo[clearIndex] = 0
+    data$RoundNo[samp1] = 1
+    data$RoundNo[samp2] = 2
+    data$RoundNo[samp3] = 3
+    
+    return(data)
+  }
   
-  clearIndex = data$Date >= "2017-06-11" & data$Date <= "2017-07-05"
-  samp1 = data$Date > "2017-07-05" & data$Date <= "2017-07-17"
-  samp2 = data$Date > "2017-07-17" & data$Date <= "2017-07-28"
-  samp3 = data$Date > "2017-07-28" & data$Date <= "2017-08-07"
-  samp4 = data$Date > "2017-08-07" & data$Date <= "2017-08-17"
-  samp5 = data$Date > "2017-08-17"
+  if(year == 2017){
+    
+    data$Date = tryCatch(as.Date(data$Date, format = '%m/%d/%Y'),
+                         error = function(m){as.Date(data$Date, origin = '1970-01-01')})
+    data$Round = NA
+    data$RoundNo = NA
+    
+    clearIndex = data$Date >= "2017-06-11" & data$Date <= "2017-07-05"
+    samp1 = data$Date > "2017-07-05" & data$Date <= "2017-07-17"
+    samp2 = data$Date > "2017-07-17" & data$Date <= "2017-07-28"
+    samp3 = data$Date > "2017-07-28" & data$Date <= "2017-08-07"
+    samp4 = data$Date > "2017-08-07" & data$Date <= "2017-08-17"
+    samp5 = data$Date > "2017-08-17"
+    
+    data$Round[clearIndex] = "Clearing"
+    data$Round[samp1] = "Sample1"
+    data$Round[samp2] = "Sample2"
+    data$Round[samp3] = "Sample3"
+    data$Round[samp4] = "Sample4"
+    data$Round[samp5] = "Sample5"
+    
+    data$RoundNo[clearIndex] = 0
+    data$RoundNo[samp1] = 1
+    data$RoundNo[samp2] = 2
+    data$RoundNo[samp3] = 3
+    data$RoundNo[samp4] = 4
+    data$RoundNo[samp5] = 5
+   
+    return(data)
+    
+  }
   
-  data$Round[clearIndex] = "Clearing"
-  data$Round[samp1] = "Sample1"
-  data$Round[samp2] = "Sample2"
-  data$Round[samp3] = "Sample3"
-  data$Round[samp4] = "Sample4"
-  data$Round[samp5] = "Sample5"
-  
-  data$RoundNo[clearIndex] = 0
-  data$RoundNo[samp1] = 1
-  data$RoundNo[samp2] = 2
-  data$RoundNo[samp3] = 3
-  data$RoundNo[samp4] = 4
-  data$RoundNo[samp5] = 5
-  
-  # for(i in 1:nrow(data)){
-  #   if(data$Date[i] >= "2017-06-11" & data$Date[i] <= "2017-07-05"){data$Round[i] = "Clearing"; data$RoundNo[i] = 0}
-  #   if(data$Date[i] > "2017-07-05" & data$Date[i] <= "2017-07-17") {data$Round[i] = "Sample1";   data$RoundNo[i] = 1}
-  #   if(data$Date[i] > "2017-07-17" & data$Date[i] <= "2017-07-28") {data$Round[i] = "Sample2";   data$RoundNo[i] = 2}
-  #   if(data$Date[i] > "2017-07-28" & data$Date[i] <= "2017-08-07") {data$Round[i] = "Sample3";   data$RoundNo[i] = 3}
-  #   if(data$Date[i] > "2017-08-07" & data$Date[i] <= "2017-08-17") {data$Round[i] = "Sample4";   data$RoundNo[i] = 4}
-  #   if(data$Date[i] > "2017-08-17")                                {data$Round[i] = "Sample5";    data$RoundNo[i] = 5}
-  # }
-  
-  return(data)
   
 }
 
@@ -121,7 +143,7 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
   # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
   out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
-  browser()
+  
   names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDate)
   
   # Convert to UTM for easy grid creation.
@@ -139,7 +161,7 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
 # Takes gpx files, makes a SpatialPointsDataFrame from it. 
 # Formats dates properly, adds 'Round', and 'RoundBySite' for ID purposes.
 
-convertPoints = function(gpx, siteInfo){
+convertPoints = function(gpx, siteInfo, survey_year){
   
   sites = siteInfo$siteID %>% as.character()
   
@@ -168,7 +190,7 @@ convertPoints = function(gpx, siteInfo){
   
   # Set dates to "round" equivalents. I.e. round 1, round 2, etc.
   
-  allPoints = reDate(allPoints)
+  allPoints = reDate(allPoints, survey_year)
   
   allPoints = allPoints %>% mutate(RoundBySite = paste0(Site, ".", Round))
   
@@ -319,6 +341,19 @@ points2line = function(points, ident){
   out = SpatialLinesDataFrame(layer_lines, data)
   
   return(out)
+  
+}
+
+scatDists = function(scatPos, trackLocs){
+  
+  # Want to use rgeos::gDistance, but limit search to tracks in same day & site as the scat. 
+  
+  site = scatPos$Site
+  date = scatPos$Date
+  
+  tpoints_local = trackLocs[trackLocs$Site == site & trackLocs$Date == date,]
+  
+  return(rgeos::gDistance(scatPos, tpoints_local))
   
 }
 
@@ -667,18 +702,7 @@ runFunc = function(comboSet, iteration, gridsVisited){
   
 }
 
-scatDists = function(scatPos, trackLocs){
-  
-  # Want to use rgeos::gDistance, but limit search to tracks in same day & site as the scat. 
-  
-  site = scatPos$Site
-  date = scatPos$Date
-  
-  tpoints_local = trackLocs[trackLocs$Site == site & trackLocs$Date == date,]
-  
-  return(rgeos::gDistance(scatPos, tpoints_local))
-  
-}
+
 
 
 # Output analysis -----------------------
