@@ -24,7 +24,7 @@ model
     
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
     lambda = exp(beta0) # immaterial except for mechanistic model of deposition process and observation.
-    theta = exp(theta0) # extend to include moose transect effect, spatial covariate effects.
+    theta = exp(theta0) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
     
     for(i in 1:nSites){
 
