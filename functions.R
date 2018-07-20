@@ -121,12 +121,14 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
   # gpxLayers = ogrListLayers(gpxFiles[1]) # Gets the layers that exist in the gpx object.
   
   out = lapply(X = gpxFiles, FUN = function(x){readOGR(dsn = x, layer = 'track_points')})
-  
-  names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDates)
+  browser()
+  names(out) = paste0(siteInfo$siteID, "_", siteInfo$siteDate)
   
   # Convert to UTM for easy grid creation.
   
   out = lapply(X = out, FUN = function(x) spTransform(x = x, CRSobj = CRS("+proj=utm +zone=18 +datum=WGS84")))
+  
+  
   
   return(out)
   
