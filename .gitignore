@@ -5,5 +5,5 @@
 *.zip
 fwdjsmodel*
 trackLogs*/*
-gpxTracksExport2017_unclean/*
+gpx*/*
 *.html
