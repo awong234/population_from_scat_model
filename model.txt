@@ -1,13 +1,30 @@
+# Will probably have to restructure.
+# Every 'site' will be a unique grid cell i. 
+# Every round t from 0 to maxT. 
+# Every visit v from 1 to maxV.
+
+# N should be allowed to vary by a covariate on Moose Transect.
+
+# theta should be allowed to vary by a covariate of Moose Transect and a spatial covariate. Ideally, it should be dependent upon days between visits. R[i,t] = dpois(theta[i] + beta1_MooseTEffect[MT] + beta2_)
+
+# Estimate # moose within model. It will be calculated as (All deposition of scats after clearing) = (R[i,] / per_moose_daily_deposition*tot_days[i]), where per_moose_deposition is a fixed or mixed effect. And tot_days[i] is the temporal observation window for that site.
+
+# The above is TOTAL pellets over the course of the season (doesn't count clearing because that has no information of date!), divided by the total deposition that ought to be made by moose over the course of the season.
+
+# per_moose_deposition as a fixed effect will be a mean daily deposition rate. Or maybe a random effect with a prior based on literature info.
+
 model
 {
     # Priors
     p00 ~ dunif(0,1)
     theta0 ~ dnorm(0,0.01) #prior for theta
-    beta0 ~ dnorm(0,0.01) #prior for lambda
+    beta0 ~ dnorm(0,0.01) #prior for lambda intercept
+    beta_site ~ dnorm(0,0.01) #prior for Moose Transect intercept
+    beta_space ~ dnorm(0,0.01) #prior for habitat covariate
     
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
     lambda = exp(beta0)
-    theta = exp(theta0)
+    theta = exp(theta0) # extend to include site, spatial covariate effects.
     
     for(i in 1:nSites){
 
@@ -33,7 +50,7 @@ model
         # Recruits are random poisson variates with mean theta.
         # Remember that y[i,t] is the t-1 visit, so it makes sense that N_t should be dependent upon what was found in the previous visit.
         for(t in 2:maxT){
-            R[i,t] ~ dpois(theta) # Every round has some added deposition after we leave.
+            R[i,t] ~ dpois(theta) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits. Reformat potentially to dpois(theta*days[site,interval])
             N[i,t,1] = N[i,t-1,2] - y[i,t-1,2] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
             N[i,t,2] = N[i,t,1] - y[i,t,1] # Second visit to a sampling unit what's there is what was there after the first visit, minus what we picked up. 
         }
