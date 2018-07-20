@@ -7,24 +7,24 @@
 
 # theta should be allowed to vary by a covariate of Moose Transect and a spatial covariate. Ideally, it should be dependent upon days between visits. R[i,t] = dpois(theta[i] + beta1_MooseTEffect[MT] + beta2_)
 
-# Estimate # moose within model. It will be calculated as (All deposition of scats after clearing) = (R[i,] / per_moose_daily_deposition*tot_days[i]), where per_moose_deposition is a fixed or mixed effect. And tot_days[i] is the temporal observation window for that site.
+# Estimate # moose within model. It will be calculated as (All deposition of scats after clearing) = ((theta[i]*tot_days / per_moose_daily_deposition[i]*tot_days[i]) = theta[i] / per_moose_daily_deposition)
 
-# The above is TOTAL pellets over the course of the season (doesn't count clearing because that has no information of date!), divided by the total deposition that ought to be made by moose over the course of the season.
+# The above is the total daily deposition rate divided by some assumed per-moose daily deposition rate.
 
-# per_moose_deposition as a fixed effect will be a mean daily deposition rate. Or maybe a random effect with a prior based on literature info.
+# per_moose_deposition as a fixed effect will be a mean daily deposition rate. Or maybe estimate a random variable with a prior based on literature info.
 
 model
 {
     # Priors
     p00 ~ dunif(0,1)
-    theta0 ~ dnorm(0,0.01) #prior for theta
+    theta0 ~ dnorm(0,0.01) #prior for theta intercept
     beta0 ~ dnorm(0,0.01) #prior for lambda intercept
     beta_site ~ dnorm(0,0.01) #prior for Moose Transect intercept
     beta_space ~ dnorm(0,0.01) #prior for habitat covariate
     
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
-    lambda = exp(beta0)
-    theta = exp(theta0) # extend to include site, spatial covariate effects.
+    lambda = exp(beta0) # immaterial except for mechanistic model of deposition process and observation.
+    theta = exp(theta0) # extend to include moose transect effect, spatial covariate effects.
     
     for(i in 1:nSites){
 
@@ -74,7 +74,9 @@ model
     }
 
     for(t in 1:maxT){
-            N_time[t] = sum(N[,t,1])
+            N_time[t] = sum(N[,t,1]) # Don't really care about this too much.
         }
+
+    # N_moose[i] = theta[i] / per_moose_deposition # something like this
 
 }
