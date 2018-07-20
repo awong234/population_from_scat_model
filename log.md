@@ -1,3 +1,7 @@
+# 2018-07-20
+
+Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
+
 # 2018-07-19
 
 GPS errors in 2017 data fixed, some of the export errors made by JL fixed. Next step is to get 2016 data together.
@@ -17,12 +21,12 @@ Workflow:
 
 ## MISLABELS
 
-06C1-2017-08-27 should be 06C2. 
-06C2-2017-08-27 should be 06C1.
-08B3-2017-08-15 should be 08B4.
-08B4-2017-08-15 should be 08B3.
-10B5-2017-08-11 should be 10B3.
-12A6-2017-07-09 should be 12A4.
+* 06C1-2017-08-27 should be 06C2. 
+* 06C2-2017-08-27 should be 06C1.
+* 08B3-2017-08-15 should be 08B4.
+* 08B4-2017-08-15 should be 08B3.
+* 10B5-2017-08-11 should be 10B3.
+* 12A6-2017-07-09 should be 12A4.
 
 Plan is to export all of the .gpx tracks to ESRI shapefile, perform spatial join with a distance of ~ 100m, then find which ones are in error. Fix names.
 
