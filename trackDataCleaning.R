@@ -21,11 +21,14 @@ library(ggplot2)
 
 # Import gpx files that AREN't incomplete.
 # importGPX(outPath = 'trackLogs_2017/') # default import from 2017 folder
-# importGPX(startPath = 'D:/MooseArchive/Field Data 2016 (Archive)/Moose 2016/Dog Tracklogs/', outPath = 'trackLogs_2016/') # import from 2016 folder
-
 
 
 # Initial Cleaning 2017 data ------------------------------------------------------------------------------------------------------------------------
+
+# Summary: 
+
+# All edits have been made to ensure clean-ness of 2017 track data. A couple of naming errors were rectified below, but the errors were identified in ArcMap, not R. 
+# Further edits have been made in ArcMap, and the final clean product exported to this directory.
 
 # There were some errors in naming, found in commented section below. Fix these HERE, explicitly.
 
@@ -59,7 +62,7 @@ siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
 
 if(!"trackPoints_2017.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = T)
+  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = F)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' # May not be necessary if done in-function.
   save('tracks_points', file = 'trackPoints_2017.Rdata')
@@ -68,7 +71,7 @@ if(!"trackPoints_2017.Rdata" %in% dir()){
   
   if(!exists("tracks_points")){
     
-    load('trackPoints_2017.Rdata')
+    load('trackPoints_2017_unclean.Rdata')
     
   }
   
@@ -199,7 +202,7 @@ siteIndex = siteIndex + 1
 
 # In depth look
 
-sitesByRound = tracks_lines %>% fortify %>% filter(grepl(id, pattern = '12A6')) %>% pull(id) %>% unique
+sitesByRound = tracks_lines %>% fortify %>% filter(grepl(id, pattern = '12A4')) %>% pull(id) %>% unique
 
 siteIndex = 0
 
@@ -227,3 +230,29 @@ rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer =
 
 # Initial cleaning 2016 Data ------------------------------------------------------------------------------------------------------------------------
 
+# importGPX(startPath = 'D:/MooseArchive/Field Data 2016 (Archive)/Moose 2016/Dog Tracklogs/', outPath = 'trackLogs_2016/') # import from 2016 folder
+
+# Some naming errors. Correct here.
+
+file.rename(from = 'trackLogs_2016/11B2_06_01_2016_JB_incomplete.gpx', to = 'trackLogs_2016/11B2_06.01.2016_JB_incomplete.gpx')
+file.rename(from = 'trackLogs_2016/3A1_08,24.16_SM.gpx', to = 'trackLogs_2016/3A1_08.24.16_SM.gpx')
+
+siteInfo = siteInfoFromFileName(path = 'trackLogs_2016/')
+
+
+if(!"trackPoints_2016.Rdata" %in% dir()){
+  
+  tracks = getGPX(path = 'trackLogs_2016/', siteInfo = siteInfo, debug = F)
+  tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
+  sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' # May not be necessary if done in-function.
+  save('tracks_points', file = 'trackPoints_2016_unclean.Rdata')
+  
+} else {
+  
+  if(!exists("tracks_points")){
+    
+    load('trackPoints_2017_unclean.Rdata')
+    
+  }
+  
+}
