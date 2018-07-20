@@ -65,7 +65,8 @@ siteInfoFromFileName = function(path = NULL){
 
 reDate = function(data){
   
-  data$Date = as.Date(data$Date, format = '%m/%d/%Y')
+  data$Date = tryCatch(as.Date(data$Date, format = '%m/%d/%Y'),
+                       error = function(m){as.Date(data$Date, origin = '1970-01-01')})
   data$Round = NA
   data$RoundNo = NA
   
@@ -141,11 +142,23 @@ convertPoints = function(gpx, siteInfo){
   sites = siteInfo$siteID %>% as.character()
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
+    
+    # ONLY project the ones with an existing projection. Set the others later.
+    if(proj4string(gpx[[i]]) != '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' & !is.na(proj4string(gpx[[i]]))){
+      gpx[[i]] = spTransform(x = gpx[[i]], CRSobj = CRS('+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'))
+    }
+    
     data.frame(gpx[[i]]@coords, 
                Site = siteInfo$siteID[i], 
-               Date = gpx[[i]]@data$time %>% as.Date %>% unique, 
-               Time = gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T'),
-               Handler = siteInfo$Handler[i]) %>% 
+               Date = ifelse(test = all(is.na(gpx[[i]]@data$time %>% as.Date %>% unique)), 
+                             yes = siteInfo$Date[i] %>% as.Date(origin = '1970-01-01'),
+                             no = gpx[[i]]@data$time %>% as.Date %>% unique
+                             ),
+               Time = tryCatch(expr = {gpx[[i]]@data$time %>% strptime(format = '%Y/%m/%d %T')},
+                               error = function(m){return(NA)}
+                               ),
+               Handler = siteInfo$Handler[i],
+               Error = siteInfo$Error[i]) %>% 
       rename(Easting = coords.x1, Northing = coords.x2)
   }
   
