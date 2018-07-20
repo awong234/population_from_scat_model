@@ -45,12 +45,6 @@ file.rename(from = 'trackLogs_2017/08B4_8.15.17_SM.gpx', to = 'trackLogs_2017/08
 file.rename(from = 'trackLogs_2017/10B5_08.11.17_JL.gpx', to = 'trackLogs_2017/10B3_08.11.17_JL_correct.gpx')
 file.rename(from = 'trackLogs_2017/12A6_07.09.17_SM.gpx', to = 'trackLogs_2017/12A4_07.09.17_SM_correct.gpx')
 
-# Metadata
-
-names = list.files(path = 'trackLogs_2017/') 
-
-siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
-
 # A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles. Delete from set
 
 file.remove('trackLogs_2017/07.16-20.17_JL.gpx')
@@ -60,9 +54,9 @@ file.remove('trackLogs_2017/07.22-25.17_JL.gpx')
 
 if(!"trackPoints_2017.Rdata" %in% dir()){
   
-  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = T)
+  tracks = getGPX(path = 'trackLogs_2017/', siteInfo = siteInfo, debug = F)
   tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
-  sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'
+  sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' # May not be necessary if done in-function.
   save('tracks_points', file = 'trackPoints_2017.Rdata')
   
 } else {
@@ -75,7 +69,9 @@ if(!"trackPoints_2017.Rdata" %in% dir()){
   
 }
 
+# Metadata
 
+siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
 
 # Import observations. 
 
