@@ -43,14 +43,14 @@ importGPX = function(startPath = NULL, outPath){
 }
 
 siteInfoFromFileName = function(path = NULL){
-  
+  # browser()
   if(is.null(path)){
     fileNames = list.files(pattern = '.gpx')
   }else{fileNames = list.files(path = path, pattern = '.gpx')}
   
   siteNames = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+[A-Z]\\d", text = ., perl = T))} %>% as.character()
   siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character() %>% as.Date(format = '%m.%d.%y')
-  siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,2}_)(\\w{2})', text = ., perl = T))} %>% 
+  siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,4}_)(\\w{2})', text = ., perl = T))} %>% 
     sapply(X = ., FUN = `[`, 3)
   
   error = rep("CLEAN", length(fileNames))
