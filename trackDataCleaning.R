@@ -47,8 +47,12 @@ file.rename(from = 'trackLogs_2017/12A6_07.09.17_SM.gpx', to = 'trackLogs_2017/1
 
 # A bunch of Jake's gpx files were not separated out. Those are the weird ones; fixed in ArcMap, now just need to load the shapefiles. Delete from set
 
-file.remove('trackLogs_2017/07.16-20.17_JL.gpx')
-file.remove('trackLogs_2017/07.22-25.17_JL.gpx')
+suppressWarnings(file.remove('trackLogs_2017/07.16-20.17_JL.gpx'))
+suppressWarnings(file.remove('trackLogs_2017/07.22-25.17_JL.gpx'))
+
+# Metadata
+
+siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
 
 # Only reload all tracks if the .Rdata file somehow gets lost.
 
@@ -68,10 +72,6 @@ if(!"trackPoints_2017.Rdata" %in% dir()){
   }
   
 }
-
-# Metadata
-
-siteInfo = siteInfoFromFileName(path = 'trackLogs_2017/')
 
 # Import observations. 
 
@@ -123,19 +123,18 @@ dates_scats$ID =  apply(X = dates_scats, MARGIN = 1, FUN = digest::sha1)
 
 # Are there any scats with site/date ID
 
-if(any(!dates_scats$ID %in% dates_tracks$ID)) {
-  
-  datesLogic = !dates_scats$ID %in% dates_tracks$ID
-  
-  # Orphan scats
-  scatLocs[datesLogic,] %>% data.frame %>% nrow
-  nrow(scatLocs %>% data.frame)
-  
-  scatLocs = scatLocs[!datesLogic,] # Get rid of the ones without a corresponding track.
+# Run once
 
-} else {
-  message("There are no orphan scats")
-}
+any(!dates_scats$ID %in% dates_tracks$ID)
+  
+datesLogic = !dates_scats$ID %in% dates_tracks$ID
+
+# Orphan scats
+scatLocs[datesLogic,] %>% data.frame %>% nrow
+nrow(scatLocs %>% data.frame)
+scatLocs[datesLogic,]
+
+scatLocs = scatLocs[!datesLogic,] # Get rid of the ones without a corresponding track.
 
 # Good enough. The missing tracks are probably the incomplete ones that will need to  be stitched together. No need to do this at the moment.
 
