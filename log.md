@@ -4,12 +4,24 @@ FUCKING JAKE
 
 Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
 
-- [x] 08B3 and 08B4 still mislabeled. Looks like two sites each that weren't picked up by the GIS.
+## Issues
+
+* [x] 08B3 and 08B4 still mislabeled. Looks like two sites each that weren't picked up by the GIS.
     * Maybe renaming was unnecessary. Testing without rename.
-- [x] One site 12A4 mislabeled as 12A6. 
+* [x] One site 12A4 mislabeled as 12A6. 
     * Part of 12A6 (one of the multitracks exports) belongs to 12A4. This is from `12A6_07.10.17_JL.gpx`. 
     * Rename to `12A4_07.10.17_JL.gpx`.
-- [ ] Part of `12A6_07.09.17_SM.gpx` should be 12A4. Need to separate out.
+* [x] Part of `12A6_07.09.17_SM.gpx` should be 12A4. Need to separate out.
+
+## ArcMap activity
+
+* A feature that consisted of 12A6 and part of 12A4 on July 9 2017 was split into two. 
+    * The portion within 12A6 was renamed to match; 12A4.Sample1.
+    * The portion within 12A4 was correctly identified and not altered.
+* Renamed '12A6.Sample1' to '12A4.Sample1', which is the single-line portion of 12A4 sampled on 
+* Made a number of edits to layer to fix GPS error, and points obviously out of search area. Original kept. 
+* Renamed '08B4.Sample4' and '08B4.Sample5' to 08B3, each.
+* Renamed '08B3.Sample4' and '08B3.Sample5' to 08B4, each.
 
 # 2018-07-19
 
