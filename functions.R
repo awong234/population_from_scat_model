@@ -778,8 +778,6 @@ makeGrid = function(tracks, data){
     
     numTracks = length(ind)
     
-    endID = startID + numTracks
-    
     # Combine all the coordinates
     
     coords = foreach(i = ind, .combine = rbind) %do% {
@@ -808,9 +806,12 @@ makeGrid = function(tracks, data){
     
     grid = GridTopology(cellcentre.offset = cellOffset, cellsize = cellSize, cells.dim = ncellsByDir)
     
-    sp_grid = SpatialGridDataFrame(grid = grid, data = data.frame(Site = site, id = seq(startID, endID)), proj4string = CRS(proj4string(tracks)))
+    endID = startID + prod(ncellsByDir) - 1
     
-    allGrids[[site]] = grid
+    sp_grid = SpatialGridDataFrame(grid = grid, data = data.frame(Site = as.character(site), id = seq(startID, endID)), proj4string = CRS(proj4string(tracks)))
+    sp_grid@data$Site = sp_grid@data$Site %>% as.character
+    
+    allGrids[[site]] = sp_grid
     
     startID = endID + 1
     
