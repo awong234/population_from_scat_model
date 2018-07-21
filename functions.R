@@ -42,14 +42,23 @@ importGPX = function(startPath = NULL, outPath){
   
 }
 
-siteInfoFromFileName = function(path = NULL){
+siteInfoFromFileName = function(path = NULL, optDates = NULL){
+  # optDates is if there are egregious errors in dates, can pass a fixed version optionally.
   # browser()
   if(is.null(path)){
     fileNames = list.files(pattern = '.gpx')
   }else{fileNames = list.files(path = path, pattern = '.gpx')}
   
   siteNames = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+[A-Z]\\d", text = ., perl = T))} %>% as.character()
-  siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character() %>% as.Date(format = '%m.%d.%y')
+  
+  if(is.null(optDates)){
+    siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character() %>% as.Date(format = '%m.%d.%y')
+  } else {
+    siteDates = optDates
+  }
+  
+  
+  
   siteHandler = fileNames %>% {regmatches(x = ., m = regexec(pattern = '(\\d{1,2}\\.{1}\\d{1,2}\\.{1}\\d{1,4}_)(\\w{2})', text = ., perl = T))} %>% 
     sapply(X = ., FUN = `[`, 3)
   
@@ -75,8 +84,8 @@ reDate = function(data, year){
 
     clearIndex = data$Date <= "2016-06-28"
     samp1 = data$Date > "2016-06-28" & data$Date <= "2016-07-17"
-    samp2 = data$Date > "2017-07-17" & data$Date <= "2017-08-06"
-    samp3 = data$Date > "2017-08-06"
+    samp2 = data$Date > "2016-07-17" & data$Date <= "2016-08-06"
+    samp3 = data$Date > "2016-08-06"
     
     data$Round[clearIndex] = "Clearing"
     data$Round[samp1] = "Sample1"
@@ -162,7 +171,7 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
 # Formats dates properly, adds 'Round', and 'RoundBySite' for ID purposes.
 
 convertPoints = function(gpx, siteInfo, survey_year){
-  
+  browser()
   sites = siteInfo$siteID %>% as.character()
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
@@ -189,9 +198,9 @@ convertPoints = function(gpx, siteInfo, survey_year){
   # allPoints$Date = as.factor(allPoints$Date)
   
   # Set dates to "round" equivalents. I.e. round 1, round 2, etc.
-  
+  browser()
   allPoints = reDate(allPoints, survey_year)
-  
+  browser()
   allPoints = allPoints %>% mutate(RoundBySite = paste0(Site, ".", Round))
   
   coordinates(allPoints) = ~Easting + Northing
@@ -321,7 +330,7 @@ points2line = function(points, ident){
   
   layer_lines = SpatialLines(layer_lines)
   
-  # browser()
+  browser()
   
   ref = rle(points@data$RoundBySite)
   

@@ -24,7 +24,11 @@ Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far aw
 
 ## 2016 tracks
 
-Justin had entered his date as a slightly different format than the rest.
+Justin had entered his date as a slightly different format than the rest. All fixed now. 
+
+Now need to export to shapefile to examine in ArcMap.
+
+## 2016 scat data
 
 # 2018-07-19
 
