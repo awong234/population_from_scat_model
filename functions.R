@@ -72,12 +72,16 @@ siteInfoFromFileName = function(path = NULL, optDates = NULL){
 
 # Reformats data dates properly and includes definition of sampling rounds.
 
-reDate = function(data, year){
+reDate = function(data, year, format = NULL){
   
   if(year == 2016){
     
-    data$Date = tryCatch(as.Date(data$Date, format = '%m/%d/%Y'),
-                         error = function(m){as.Date(data$Date, origin = '1970-01-01')})
+    # Does it need formatting? 
+    
+    if(!is.null(format)){
+      data$Date = tryCatch(as.Date(data$Date, format = format),
+                           error = function(m){as.Date(data$Date, origin = '1970-01-01')})
+    }
 
     data$Round = NA
     data$RoundNo = NA
@@ -170,8 +174,8 @@ getGPX = function(path = NULL, debug = F, debugLim = 10, siteInfo){
 # Takes gpx files, makes a SpatialPointsDataFrame from it. 
 # Formats dates properly, adds 'Round', and 'RoundBySite' for ID purposes.
 
-convertPoints = function(gpx, siteInfo, survey_year){
-  browser()
+convertPoints = function(gpx, siteInfo, survey_year, dateFormat = NULL){
+  
   sites = siteInfo$siteID %>% as.character()
   
   allPoints = foreach(i = seq_along(gpx), .combine = rbind) %do% {
@@ -198,10 +202,10 @@ convertPoints = function(gpx, siteInfo, survey_year){
   # allPoints$Date = as.factor(allPoints$Date)
   
   # Set dates to "round" equivalents. I.e. round 1, round 2, etc.
-  browser()
-  allPoints = reDate(allPoints, survey_year)
-  browser()
-  allPoints = allPoints %>% mutate(RoundBySite = paste0(Site, ".", Round))
+  
+  allPoints = reDate(allPoints, survey_year, dateFormat)
+  
+  allPoints = allPoints %>% mutate(RoundBySite = paste0(Site, ".", Round), Site = as.character(Site))
   
   coordinates(allPoints) = ~Easting + Northing
   
@@ -330,16 +334,17 @@ points2line = function(points, ident){
   
   layer_lines = SpatialLines(layer_lines)
   
-  browser()
+  # browser()
   
   ref = rle(points@data$RoundBySite)
   
+  id = points@data %>% group_by_(eval(ident)) %>% summarise(Site = first(Site))
   sites = points@data %>% group_by_(eval(ident)) %>% summarise(Site = first(Site))
   dates = points@data %>% group_by_(eval(ident)) %>% summarise(Date = first(Date))
   rounds = points@data %>% group_by_(eval(ident)) %>% summarise(Round = first(Round))
   roundsNo = points@data %>% group_by_(eval(ident)) %>% summarise(RoundNo = first(RoundNo))
   
-  data = data.frame(id = ref$values,
+  data = data.frame(id = ref$values %>% unique %>% sort,
                     Site = sites$Site,
                     Date = dates$Date,
                     Round = rounds$Round,
