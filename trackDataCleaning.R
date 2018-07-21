@@ -81,7 +81,7 @@ if(!"trackPoints_2017.Rdata" %in% dir()){
 
 # Import observations. 
 
-scatLocs = read.csv(file = 'cleanedAllScatData.csv', stringsAsFactors = F)
+scatLocs = read.csv(file = 'scats2017.csv', stringsAsFactors = F)
 scatLocs = scatLocs %>% rename(Date = Day) %>% filter(Species == 'Moose')
 
 # Convert to UTM
@@ -128,23 +128,26 @@ dates_tracks$ID = apply(X = dates_tracks, MARGIN = 1, FUN = digest::sha1)
 dates_scats$ID =  apply(X = dates_scats, MARGIN = 1, FUN = digest::sha1)
 
 # Are there any scats with site/date ID
-
+once = 1
 # Run once
+if(once == 1){
 
-any(!dates_scats$ID %in% dates_tracks$ID)
-  
-datesLogic = !dates_scats$ID %in% dates_tracks$ID
+  any(!dates_scats$ID %in% dates_tracks$ID)
+    
+  datesLogic = !dates_scats$ID %in% dates_tracks$ID
 
-# Orphan scats
-scatLocs[datesLogic,] %>% data.frame %>% nrow
-nrow(scatLocs %>% data.frame)
-scatLocs[datesLogic,]
+  # Orphan scats
+  scatLocs[datesLogic,] %>% data.frame %>% nrow
+  nrow(scatLocs %>% data.frame)
+  scatLocs[datesLogic,]
 
-scatLocs = scatLocs[!datesLogic,] # Get rid of the ones without a corresponding track.
+  scatLocs = scatLocs[!datesLogic,] # Get rid of the ones without a corresponding track.
 
-# Good enough. The missing tracks are probably the incomplete ones that will need to  be stitched together. No need to do this at the moment.
+  # Good enough. The missing tracks are probably the incomplete ones that will need to  be stitched together. No need to do this at the moment.
 
+  once = once + 1
 
+}
 
 # Track & scat overlay ------------------------------------------------------------------------------------------------------------------
 
@@ -222,8 +225,6 @@ list.files(path = 'trackLogs_2017/', pattern = '12A4|12A6')
 
 rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer = 'gpxTracksExport2017_unclean', driver = 'ESRI Shapefile')
 
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 
@@ -234,16 +235,40 @@ rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2017_unclean', layer =
 
 # Some naming errors. Correct here.
 
-file.rename(from = 'trackLogs_2016/11B2_06_01_2016_JB_incomplete.gpx', to = 'trackLogs_2016/11B2_06.01.2016_JB_incomplete.gpx')
+file.rename(from = 'trackLogs_2016/11B2_06_01_2016_JB_incomplete.gpx', to = 'trackLogs_2016/11B2_06.01.16_JB_incomplete.gpx')
 file.rename(from = 'trackLogs_2016/3A1_08,24.16_SM.gpx', to = 'trackLogs_2016/3A1_08.24.16_SM.gpx')
+file.rename(from = 'trackLogs_2016/10A3_8.14.16_SM.gpx', to = 'trackLogs_2016/10A3_08.14.16_SM.gpx')
+file.rename(from = 'trackLogs_2016/10A2_8.14.16_SM.gpx', to = 'trackLogs_2016/10A2_08.14.16_SM.gpx')
 
-siteInfo = siteInfoFromFileName(path = 'trackLogs_2016/')
+# Find more naming errors
 
+fileNames = list.files(path = 'trackLogs_2016/', pattern = '.gpx')
 
-if(!"trackPoints_2016.Rdata" %in% dir()){
+siteDates = fileNames %>% {regmatches(x = ., m = regexec(pattern = "\\d+\\.\\d+\\.\\d+", text = ., perl = T))} %>% as.character()
+
+# Sites should be formatted like mm.dd.yy
+
+correctForm = grepl(pattern = '^\\d{2}\\.\\d{2}\\.\\d{2}$', x = siteDates)
+
+siteDates[correctForm] = as.Date(siteDates[correctForm], format = '%m.%d.%y')
+siteDates[!correctForm] = as.Date(siteDates[!correctForm], format = '%m.%d.%Y')
+
+siteDates = siteDates %>% as.integer %>% as.Date(origin = '1970-01-01')
+
+siteInfo = siteInfoFromFileName(path = 'trackLogs_2016/', optDates = siteDates) %>% mutate(siteID = as.character(siteID))
+
+cbind.data.frame(siteInfo, fileNames) %>% sample_n(size = 5)
+
+# Rename site names to conform to 2017 style 'ddLd'.
+
+index = grepl(pattern = '^\\d{1}\\w\\d', x = siteInfo$siteID)
+
+siteInfo$siteID[index] = paste0('0', siteInfo$siteID[index])
+
+if(!"trackPoints_2016_unclean.Rdata" %in% dir()){
   
   tracks = getGPX(path = 'trackLogs_2016/', siteInfo = siteInfo, debug = F)
-  tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo)
+  tracks_points = convertPoints(gpx = tracks, siteInfo = siteInfo, survey_year = 2016)
   sp::proj4string(tracks_points) = '+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0' # May not be necessary if done in-function.
   save('tracks_points', file = 'trackPoints_2016_unclean.Rdata')
   
@@ -251,8 +276,17 @@ if(!"trackPoints_2016.Rdata" %in% dir()){
   
   if(!exists("tracks_points")){
     
-    load('trackPoints_2017_unclean.Rdata')
+    load('trackPoints_2016_unclean.Rdata')
     
   }
   
 }
+
+# Export over to shapefile
+
+tracks_lines = points2line(tracks_points, ident = "RoundBySite")
+
+# Load scat data. 
+
+scatLocs = read.csv(file = 'scats2016.csv', stringsAsFactors = F)
+
