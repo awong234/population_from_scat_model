@@ -1,7 +1,5 @@
 # 2018-07-20
 
-FUCKING JAKE
-
 Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
 
 ## Issues
@@ -26,7 +24,7 @@ Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far aw
 
 ## 2016 tracks
 
-
+Justin had entered his date as a slightly different format than the rest.
 
 # 2018-07-19
 
