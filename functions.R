@@ -756,3 +756,66 @@ assessOutputs = function(f, file.list, analysisIDs, settings){
                     ID = analysisID))
   
 }
+
+
+# Data formatting ------------------------------------------------------------------
+
+makeGrid = function(tracks, data){
+  
+  startID = 1
+  
+  allGrids = list()
+  
+  # Group tracks by site. 
+  
+  sites = data$Site %>% unique
+  
+  for(site in sites){
+    
+    # Get indexes of a particular site
+    
+    ind = which(data$Site == site)
+    
+    numTracks = length(ind)
+    
+    endID = startID + numTracks
+    
+    # Combine all the coordinates
+    
+    coords = foreach(i = ind, .combine = rbind) %do% {
+      
+      tracks@lines[[i]]@Lines[[1]]@coords
+      
+    }
+    
+    # Get bbox of coordinates
+    
+    bbox_tracks = bbox(coords)
+    
+    # Add a buffer
+    
+    buff = 300
+    
+    buffmat = matrix(c(-buff, -buff, buff, buff), nrow = 2, ncol = 2)
+    
+    bbox_tracks = bbox_tracks + buffmat
+    
+    # Make a grid over the buffer
+    
+    cellSize = c(50, 50)
+    cellOffset = bbox_tracks[,1] + cellSize/2
+    ncellsByDir = ceiling(diff(t(bbox_tracks))/cellSize)
+    
+    grid = GridTopology(cellcentre.offset = cellOffset, cellsize = cellSize, cells.dim = ncellsByDir)
+    
+    sp_grid = SpatialGridDataFrame(grid = grid, data = data.frame(Site = site, id = seq(startID, endID)), proj4string = CRS(proj4string(tracks)))
+    
+    allGrids[[site]] = grid
+    
+    startID = endID + 1
+    
+  }
+  
+  return(allGrids)
+  
+}
