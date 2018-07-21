@@ -1,8 +1,24 @@
+# 2018-07-21
+
+## Formatting data for use in script.
+
+## Scat cleaning 2016
+
+* [x] Validate that scats sites are all labeled as their nearest transect; not done for 2017 yet.
+* [x] Eliminated ~30 scat records without a corresponding track.
+
+## ArcMap activity
+
+### Track cleaning 
+
+* [x] Error in 07A1.Clearing, this was the day Justin cleared a whole transect adjacent to the correct one. Correct.
+* [x] One feature in 07A2 is a multi-track line. Split and name correctly.
+
 # 2018-07-20
 
 Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
 
-## Issues
+## Track cleaning Issues
 
 * [x] 08B3 and 08B4 still mislabeled. Looks like two sites each that weren't picked up by the GIS.
     * Maybe renaming was unnecessary. Testing without rename.
@@ -27,6 +43,11 @@ Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far aw
 Justin had entered his date as a slightly different format than the rest. All fixed now. 
 
 Now need to export to shapefile to examine in ArcMap.
+
+### Issues
+
+* One layer of 02A2 looks out of place
+* One layer of 02B3 looks out of place, potentially swapped with the previous.
 
 ## 2016 scat data
 

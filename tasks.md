@@ -2,12 +2,19 @@
 
 ## Track Data
 
-* [x] Finish cleaning 2017
+* [x] Clean 2017
     * [x] Separate out multi-track files
         * Edits done in ArcMap, see log
+    * [x] Clean scat data
+        * [x] Check to see that scat sites aren't mislabeled
 * [ ] Clean 2016
+    * [x] Clean transect data
+        * [x] Separate out multi-export tracks
+    * [x] Clean scat data
+        * [x] Some scats found to be mislabeled. Fix. 
 * [ ] Format for analysis
-    * [ ] Get grid overlay over tracks
+    * [ ] Get grid overlay over tracks, count up visits & times of visit if possible. 
+        *   **MAY NOT BE POSSIBLE FOR RECONSTRUCTED VISITS** be careful.
     * [ ] Get interval between visits as data. **IMPORTANT**, as we're adjusting theta to be site-specific *daily deposition rate*
     * [ ] Get index of transects as data, for transect-level effect. Not sure the utility for prediction, though, since other parts of ADK are unreferenced to transect
 
