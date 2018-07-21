@@ -16,6 +16,7 @@ library(dplyr)
 library(rgdal)
 library(sp)
 library(ggplot2)
+library(doParallel)
 
 # Setup ------------------------------------------------------------------------------------------------------------------------
 
@@ -286,7 +287,117 @@ if(!"trackPoints_2016_unclean.Rdata" %in% dir()){
 
 tracks_lines = points2line(tracks_points, ident = "RoundBySite")
 
-# Load scat data. 
+proj4string(tracks_lines) = proj4string(tracks_points)
 
-scatLocs = read.csv(file = 'scats2016.csv', stringsAsFactors = F)
+sites = tracks_points@data$Site %>% unique
+
+rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2016_unclean', layer = 'gpxTracksExport2016_unclean', driver = 'ESRI Shapefile')
+
+# Load scat data, format --------------------------------------------------------------------------------------------------------------
+
+# If clean tracks exist, bring those in.
+
+tracks2016_clean = readOGR(dsn = 'gpxTracks2016_CLEANED', layer = 'gpxTracks2016_CLEANED')
+
+tracks2016_clean@lines[[1]]@Lines[[1]]@coords %>% cbind.data.frame(., 1:nrow(.)) %>% rename(Easting = `1`, Northing = `2`, ID = `1:nrow(.)`) %>% 
+  ggplot() + geom_point(aes(x = Easting, y = Northing, color = ID))
+
+if(file.exists('scatLocs2016_cleaned.csv')){
+  
+  scatLocs = read.csv('scatLocs2016_cleaned.csv', stringsAsFactors = F)
+  
+} else {
+  
+  scatLocs = read.csv(file = 'scats2016.csv', stringsAsFactors = F)
+  scatLocs$Date = as.Date(scatLocs$Date_Time)
+  
+  # Rename sites to conform to 2017 structure.
+  
+  index = grepl(pattern = '^\\d{1}\\w\\d', x = scatLocs$Site)
+  scatLocs$Site[index] = paste0('0', scatLocs$Site[index])
+  
+  # Inspection 
+  
+  # Look at both overlaid
+  
+  skip = T
+  
+  if(!skip){
+    
+    siteIndex = 1
+    
+    siteIndex = siteIndex + 1
+    
+    tracks_lines %>% fortify %>% filter(grepl(id, pattern = sites[siteIndex] %>% as.character)) %>%
+      ggplot() +
+      geom_path(aes(x = long, y = lat, group = group)) +
+      geom_text(aes(x = min(long), y = min(lat), label = sites[siteIndex] %>% as.character)) + 
+      geom_point(data = scatLocs %>% data.frame %>% filter(Site == sites[siteIndex]), aes(x = Easting, y = Northing), color = 'red') +
+      coord_equal()
+    
+    
+  }
+  
+  
+  # Find tsect nearest to scats to validate site ID
+  
+  scatLocs_spdf = scatLocs
+  coordinates(scatLocs_spdf) = ~Easting + Northing
+  
+  scatTrackCompare = foreach(i = 1:nrow(scatLocs), .combine = rbind.data.frame) %do% {
+    
+    siteScat = scatLocs_spdf[i,"Site"]
+    
+    allDist = rgeos::gDistance(scatLocs_spdf[i,], tracks_lines, byid = T)
+    minDistTrack = tracks_lines@data[which.min(allDist),"Site"]
+    
+    out = data.frame(scatSite = siteScat, nearestSite = minDistTrack)
+    
+    return(out)
+    
+  }
+  
+  compare = scatTrackCompare %>% rowwise %>% summarize(compare = scatSite.Site == nearestSite) 
+  compare = compare$compare
+  
+  badScats = scatTrackCompare[!compare,]
+  
+  scatLocs[!compare,]$Site = scatTrackCompare[!compare, "nearestSite"] %>% as.character()
+  
+  # any orphan scats?
+  
+  tracks_points = tracks2016_clean %>% as("SpatialPointsDataFrame")
+  
+  dates_tracks = tracks_points %>% data.frame %>% select(Site, Date) %>% unique
+  dates_tracks = dates_tracks %>% mutate(Date = as.character(as.Date(Date, format = "%Y-%m-%d")),
+                                         Site = as.character(Site))
+  
+  str(dates_tracks)
+  
+  dates_scats = scatLocs %>% data.frame %>% select(Site, Date_Time)
+  dates_scats = dates_scats %>% mutate(Date = as.character(as.Date(Date_Time, format = "%Y-%m-%d")),
+                                       Site = as.character(Site)) %>% select(Site, Date)
+  
+  str(dates_scats)
+  
+  dates_tracks$ID = apply(X = dates_tracks, MARGIN = 1, FUN = digest::sha1)
+  dates_scats$ID =  apply(X = dates_scats, MARGIN = 1, FUN = digest::sha1)
+  
+  any(!dates_scats$ID %in% dates_tracks$ID)
+  
+  datesLogic = !dates_scats$ID %in% dates_tracks$ID
+  
+  # Orphan scats
+  scatLocs[datesLogic,] %>% data.frame %>% nrow
+  nrow(scatLocs %>% data.frame)
+  scatLocs[datesLogic,]
+  
+  # Remove orphan scats ; no use without a track
+  
+  scatLocs = scatLocs[!datesLogic,]
+  
+  write.csv(x = scatLocs,file = 'scatLocs2016_cleaned.csv')
+  
+  
+}
 
