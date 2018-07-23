@@ -570,6 +570,6 @@ scats2016[nearestTracks$largeDist == T,]
 # Some errors found - most corrected now. CLEANED.
 
 scatsReferenced = nearestTracks %>% select(Site:Northing, Dist:largeDist)
-scatsReferenced = scatsReferenced %>% rename(distMoved = Dist)
+scatsReferenced = scatsReferenced %>% rename(distMoved = Dist) %>% arrange(Time)
 
 save(list = c("scatsReferenced"), file = 'scatsData.Rdata')
