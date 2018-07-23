@@ -1,3 +1,17 @@
+# 2018-07-22
+
+The track lines layer as managed did not retain time information, which is critical for aligning scats to tracks. The scats need to be aligned to the nearest track point in time. 
+
+I make the assumption of aligned time in scat records and track records. This ought to be mostly kept due to the fact that time was not manually recorded, but automatically by the device taken. The strong assumption is, then, that the devices are aligned in time such that matching the scat to the nearest track point in time does **not** strongly deviate its position in space. This residual can be compared.
+
+## ArcMap activity
+
+Cleaning will be undertaken again in ArcMap due to above loss of time information in the lines layers. The activity on 2017-07-21 will be replicated. This means the lines feature **should** be deprecated, but will be kept in case.
+
+* [x] `07A3.Clearing` Renamed to `07A2.Clearing`.
+* [ ] Error found in tracks, cleaning now; `02B3.Clearing` ought to be `02A2.Clearing`. This was actually noted on 07-20.
+
+
 # 2018-07-21
 
 ## Formatting data for use in script.
@@ -9,7 +23,7 @@
 
 ## ArcMap activity
 
-### Track cleaning 
+### Track cleaning 2016
 
 * [x] Error in 07A1.Clearing, this was the day Justin cleared a whole transect adjacent to the correct one. Correct.
 * [x] One feature in 07A2 is a multi-track line. Split and name correctly.
@@ -18,7 +32,7 @@
 
 Viewing 2017 data, most scats are in the vicinity of dog tracks. Some are far away, certainly outside the 50m box and won't be counted in a 'visited' cell. Task is to have all the scat locations inherit the location of the **nearest** point on the corresponding dog track line.
 
-## Track cleaning Issues
+## Track cleaning Issues 2017
 
 * [x] 08B3 and 08B4 still mislabeled. Looks like two sites each that weren't picked up by the GIS.
     * Maybe renaming was unnecessary. Testing without rename.
