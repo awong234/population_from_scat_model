@@ -2,6 +2,7 @@ require(rgdal)
 require(doParallel)
 require(dplyr)
 require(rgeos)
+require(sp)
 
 # Setup --------------------------
 
@@ -805,4 +806,72 @@ makeGrid = function(tracks, data, buff = 300){
   
   return(allGrids)
   
+}
+
+rlePoints = function(visitInfo, points, grids, plots = F, animation = F){
+  
+  intersections = list()
+  
+  for(i in 1:nrow(visitInfo)){
+    # browser()
+    site = visitInfo[i,"Site"]
+    RndBySt = visitInfo[i,"RndBySt"]
+    
+    grid_site = grids[[site]]
+    
+    points_visit = points[points@data$RndBySt == RndBySt,]
+    
+    # Check to see that points are referenced correctly
+    
+    if(plots){
+      
+      p = ggplot() + 
+        geom_tile(data = grid_site %>% data.frame, aes(x = x, y = y), color = 'black', fill = NA) + 
+        geom_text(data = grid_site %>% data.frame, aes(x = x, y = y, label = id), color = 'gray20', alpha = 0.5, size = 2) + 
+        coord_equal() + theme_bw()
+      
+      if(nrow(points_visit) > 0){
+        p = p + geom_point(data = points_visit %>% data.frame, aes(x = Easting, y = Northing), color = 'red')
+      }
+      print(p)
+      
+    }
+    
+    intersect = rle(over(x = points_visit, y = grid_site)$id)
+    # browser()
+    
+    # browser()
+    if(animation){
+      
+      current = 1
+      by = 1
+      windowBuff = 100
+      
+      while(currentPt <= nrow(points_visit)){
+        currentPt = points_visit[current,]
+        
+        Cairo::Cairo(width = 500, height = 500, file = paste0('images/anim/img',current,'.png'), dpi = 100)
+        print(
+          ggplot() + 
+            geom_tile(data = grid_site %>% data.frame, aes(x = x, y = y), color = 'black', fill = NA) + 
+            geom_point(data = points_visit %>% data.frame, aes(x = Easting, y = Northing), color = 'black', shape = 1) + 
+            geom_point(data = currentPt %>% data.frame, aes(x = Easting, y = Northing), color = 'red', shape = 16) + 
+            geom_text(data = grid_site %>% data.frame, aes(x = x, y = y, label = id), color = 'gray20', alpha = 1, size = 2) + 
+            coord_equal(xlim = currentPt$Easting + c(-windowBuff, windowBuff), ylim = currentPt$Northing - c(-windowBuff, windowBuff)) + theme_bw() + 
+            theme(axis.text = element_blank(), axis.title = element_blank())
+        )
+        dev.off()
+        
+        current = current + by
+        
+      }
+      
+      
+      }
+    
+    intersections[[i]] = intersect
+    
+  }
+  
+  return(intersections)
 }
