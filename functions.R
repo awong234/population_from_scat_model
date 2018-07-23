@@ -358,18 +358,6 @@ points2line = function(points, ident){
   
 }
 
-scatDists = function(scatPos, trackLocs){
-  
-  # Want to use rgeos::gDistance, but limit search to tracks in same day & site as the scat. 
-  
-  site = scatPos$Site
-  date = scatPos$Date
-  
-  tpoints_local = trackLocs[trackLocs$Site == site & trackLocs$Date == date,]
-  
-  return(rgeos::gDistance(scatPos, tpoints_local))
-  
-}
 
 # Simulation ----------------------------------------------------------------------------
 
