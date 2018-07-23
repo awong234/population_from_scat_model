@@ -522,7 +522,7 @@ ggplot(data = timeDiffs_melt) +
 
 # Nearest track info
 
-nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dopar% {
+nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %do% {
   
   scatRndBySt = scats2016[i,]$RndBySt
   

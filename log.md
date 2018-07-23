@@ -1,5 +1,34 @@
 # 2018-07-23
 
+## Formatting data
+
+Run-length encoding performed on the grid cell intersections provides the order of observation, for the tracks, as well as for the scats. We can tally how many grid cells were observed multiple times, with scats in them - they number 27.
+
+However, there are plenty of replicated grid cells by the dogs, up to 20 times, with many of them being two times or more
+
+|.  |  Freq|
+|:--|-----:|
+|1  | 15092|
+|2  |  5216|
+|3  |  1948|
+|4  |   860|
+|5  |   403|
+|6  |   190|
+|7  |   114|
+|8  |    71|
+|9  |    38|
+|10 |    13|
+|11 |    12|
+|12 |    12|
+|13 |    10|
+|14 |     6|
+|15 |     4|
+|16 |     1|
+|17 |     1|
+|18 |     1|
+|19 |     1|
+|20 |     1|
+
 ## ArcMap Activity
 
 * [x] More errors found in track points, but not in lines. Fixing.
