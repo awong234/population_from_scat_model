@@ -1,7 +1,7 @@
 # Will probably have to restructure.
 # Every 'site' will be a unique grid cell i. 
 # Every round t from 0 to maxT. 
-# Every visit v from 1 to maxV.
+# Every visit v from 1 to maxV. THIS NEEDS TO BE REFERENCED PROPERLY WHEN CALCULATING THE MECHANISM OF N, y, and R!!!!!!
 
 # N should be allowed to vary by a covariate on Moose Transect.
 
