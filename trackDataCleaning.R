@@ -557,9 +557,11 @@ nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dop
 
 nearestTracks %>% head
 
-qTable = data.frame(Percentile = seq(0,100,by = 1), DistMoved = nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01))) # 96% of samples collected are within 13m of the nearest track point. Not bad.
+prob = c(seq(0,0.9,by=0.1), seq(0.91,1,by = 0.01))
 
+qTable = tibble(Percentile = prob, DistMoved = nearestTracks$Dist %>% quantile(prob = prob)) # 96% of samples collected are within 13m of the nearest track point. Not bad.
 
+knitr::kable(qTable, format = 'markdown')
 
 nearestTracks[nearestTracks$largeDist == T,]
 
