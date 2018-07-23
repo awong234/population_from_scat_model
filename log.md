@@ -6,6 +6,34 @@
 * [x] Errors in scat location, some not referenced properly to nearest site. Some scat collections labeled as collected in 07A1 were actually collected in 07A3.
 * Not fixable : Four scats located >100m from nearest track point, but not in the vicinity of another site. Acceptable losses.
 
+## Data Cleaning COMPLETE
+
+* Scats referenced to nearest track point, saved into `scatsData.Rdata` as the object `scatsReferenced`. 
+    * Note that distMoved is the 'residual' distance between the original collection location and the moved location.
+
+| Percentile|   DistMoved|
+|----------:|-----------:|
+|       0.00|   0.0000083|
+|       0.10|   0.6086150|
+|       0.20|   1.1026085|
+|       0.30|   1.5471718|
+|       0.40|   2.0019971|
+|       0.50|   2.5559814|
+|       0.60|   3.3894581|
+|       0.70|   4.2767710|
+|       0.80|   5.7106574|
+|       0.90|   8.2930854|
+|       0.91|   8.6496837|
+|       0.92|   9.1293406|
+|       0.93|   9.7858546|
+|       0.94|  11.3028923|
+|       0.95|  12.1658219|
+|       0.96|  13.1328228|
+|       0.97|  17.1034756|
+|       0.98|  23.2711577|
+|       0.99|  46.2693123|
+|       1.00| 923.7595729|
+
 # 2018-07-22
 
 The track lines layer as managed did not retain time information, which is critical for aligning scats to tracks. The scats need to be aligned to the nearest track point in time. 
