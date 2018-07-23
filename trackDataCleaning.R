@@ -344,6 +344,7 @@ if(file.exists('scatLocs2016_cleaned.csv')){
   
   scatLocs_spdf = scatLocs
   coordinates(scatLocs_spdf) = ~Easting + Northing
+  proj4string(scatLocs_spdf) = proj4string(tracks_lines)
   
   scatTrackCompare = foreach(i = 1:nrow(scatLocs), .combine = rbind.data.frame) %do% {
     
@@ -367,9 +368,10 @@ if(file.exists('scatLocs2016_cleaned.csv')){
   
   # any orphan scats?
   
-  tracks_points = tracks2016_clean %>% as("SpatialPointsDataFrame")
-  
-  dates_tracks = tracks_points %>% data.frame %>% select(Site, Date) %>% unique
+  tracks2016_points = tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer = 'tracks2016_points_clean', stringsAsFactors = F)
+  attr(tracks2016_points@coords, 'dimnames') = list(NULL, c("Easting", "Northing"))
+
+  dates_tracks = tracks2016_points %>% data.frame %>% select(Site, Date) %>% unique
   dates_tracks = dates_tracks %>% mutate(Date = as.character(as.Date(Date, format = "%Y-%m-%d")),
                                          Site = as.character(Site))
   
@@ -406,6 +408,7 @@ if(file.exists('scatLocs2016_cleaned.csv')){
   
 }
 
+
 # 2016 data, scat and transect time ------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -417,6 +420,13 @@ scats2016 = read.csv(file = 'scatLocs2016_cleaned.csv', stringsAsFactors = F)
 tracks2016_points@data$Time = tracks2016_points@data$Time %>% as.POSIXct(format = "%Y-%m-%d %H:%M:%S")
 scats2016$Time = scats2016$Time %>% as.POSIXct(format = "%Y-%m-%d %H:%M:%S")
 
+scats2016_spdf = scats2016
+coordinates(scats2016_spdf) = ~Easting + Northing
+proj4string(scats2016_spdf) = proj4string(tracks2016_points)
+
+# Write to shapefile just in case
+
+rgdal::writeOGR(obj = scats2016_spdf, dsn = 'scatPoints2016', layer = 'scatPoints2016', driver = "ESRI Shapefile", overwrite_layer = T)
 
 # Okay but what about the times? Can we compare the distribution of scat and transect times? 
 
@@ -506,9 +516,9 @@ ggplot(data = timeDiffs_melt) +
 # are the quantity of scats in those grid cells.
 
 # Fields faster
-microbenchmark::microbenchmark(rgeos = {rgeos::gDistance(scats2016_spdf[1,], tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',], byid = T)},
-                               fields = {fields::rdist(cbind(scats2016[1,"Easting"], scats2016[1,"Northing"]), coordinates(tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',]))},
-                               times = 500)
+# microbenchmark::microbenchmark(rgeos = {rgeos::gDistance(scats2016_spdf[1,], tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',], byid = T)},
+#                                fields = {fields::rdist(cbind(scats2016[1,"Easting"], scats2016[1,"Northing"]), coordinates(tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',]))},
+#                                times = 500)
 
 # Nearest track info
 
@@ -527,31 +537,18 @@ nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dop
   
   if(min(dists) > 100){
     
-    dists_alt = fields::rdist(cbind(scats2016[i,"Easting"], scats2016[i,"Northing"]), coordinates(tracks2016_points))
-    
-    nearestTrackPt = tracks2016_points[which.min(dists_alt),] %>% data.frame
-    
-    if(min(dists_alt) < min(dists)){
-      
-      error = T
-      
-      nearestTrackPt$Dist_alt = dists_alt[which.min(dists_alt)]
-      
-    } 
+    largeDist = T
     
   } else { 
     
-    error = F
-    
-    nearestTrackPt$Dist_alt = NA
+    largeDist = F
     
   }
-  
   
   nearestTrackPt$Dist = dists[which.min(dists)]
   nearestTrackPt$ScatEasting = scats2016[i,"Easting"]
   nearestTrackPt$ScatNorthing = scats2016[i,"Northing"]
-  nearestTrackPt$Error = error
+  nearestTrackPt$largeDist = largeDist
   
   
   return(nearestTrackPt)
@@ -560,15 +557,14 @@ nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dop
 
 nearestTracks %>% head
 
-nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01))
+nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01)) # 96% of samples collected are within 13m of the nearest track point. Not bad.
 
-nearestTracks[nearestTracks$Error == T,]
+nearestTracks[nearestTracks$largeDist == T,]
 
-scats2016[nearestTracks$Error == T,]
+scats2016[nearestTracks$largeDist == T,]
 
-# Some errors found 
+# Some errors found - most corrected now. CLEANED.
 
-ggplot() + 
-  geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '07A1'), aes(x = Easting, y = Northing)) + 
-  # geom_text(data = tracks2016_points %>% data.frame %>% group_by(Site) %>% sample_n(1), aes(x = Easting, y = Northing, label = Site)) + 
-  geom_point(data = scats2016[nearestTracks$Error,] %>% filter(Site == '03A3'), aes(x = Easting, y = Northing), color = 'blue')
+scatsReferenced = nearestTracks %>% select(Site:Northing, ScatEasting:largeDist)
+
+save('scatsReferenced', file = 'scatsData.Rdata')
