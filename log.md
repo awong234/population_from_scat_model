@@ -1,3 +1,11 @@
+# 2018-07-23
+
+## ArcMap Activity
+
+* [x] More errors found in track points, but not in lines. Fixing.
+* [x] Errors in scat location, some not referenced properly to nearest site. Some scat collections labeled as collected in 07A1 were actually collected in 07A3.
+* Not fixable : Four scats located >100m from nearest track point, but not in the vicinity of another site. Acceptable losses.
+
 # 2018-07-22
 
 The track lines layer as managed did not retain time information, which is critical for aligning scats to tracks. The scats need to be aligned to the nearest track point in time. 
