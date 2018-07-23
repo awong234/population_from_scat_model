@@ -292,15 +292,16 @@ proj4string(tracks_lines) = proj4string(tracks_points)
 sites = tracks_points@data$Site %>% unique
 
 rgdal::writeOGR(obj = tracks_lines, dsn = 'gpxTracksExport2016_unclean', layer = 'gpxTracksExport2016_unclean', driver = 'ESRI Shapefile')
+rgdal::writeOGR(obj = tracks_points, dsn = 'gpxTracksExport2016_unclean_points', layer = 'gpxTracksExport2016_unclean_points', driver = "ESRI Shapefile")
+
+# Unclean shapefile was cleaned in ArcMap, but lost time information. The points data were exported to shapefile (above), and cleaned again in ArcMap.
+
 
 # Load scat data, format --------------------------------------------------------------------------------------------------------------
 
 # If clean tracks exist, bring those in.
 
-tracks2016_clean = readOGR(dsn = 'gpxTracks2016_CLEANED', layer = 'gpxTracks2016_CLEANED')
-
-tracks2016_clean@lines[[1]]@Lines[[1]]@coords %>% cbind.data.frame(., 1:nrow(.)) %>% rename(Easting = `1`, Northing = `2`, ID = `1:nrow(.)`) %>% 
-  ggplot() + geom_point(aes(x = Easting, y = Northing, color = ID))
+tracks_lines = readOGR(dsn = 'gpxTracks2016_CLEANED', layer = 'tracks2016_clean')
 
 if(file.exists('scatLocs2016_cleaned.csv')){
   
@@ -396,8 +397,178 @@ if(file.exists('scatLocs2016_cleaned.csv')){
   
   scatLocs = scatLocs[!datesLogic,]
   
+  scatLocs = scatLocs %>% reDate(year = 2016)
+  
+  scatLocs = scatLocs %>% mutate(RndBySt = paste0(Site, ".", Round), Site = as.character(Site)) %>% rename(Time = Date_Time)
+  
   write.csv(x = scatLocs,file = 'scatLocs2016_cleaned.csv')
   
   
 }
 
+# 2016 data, scat and transect time ------------------------------------------------------------------------------------------------------------------------------------
+
+
+tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer = 'tracks2016_points_clean', stringsAsFactors = F)
+attr(tracks2016_points@coords, 'dimnames') = list(NULL, c("Easting", "Northing"))
+
+scats2016 = read.csv(file = 'scatLocs2016_cleaned.csv', stringsAsFactors = F)
+
+tracks2016_points@data$Time = tracks2016_points@data$Time %>% as.POSIXct(format = "%Y-%m-%d %H:%M:%S")
+scats2016$Time = scats2016$Time %>% as.POSIXct(format = "%Y-%m-%d %H:%M:%S")
+
+
+# Okay but what about the times? Can we compare the distribution of scat and transect times? 
+
+# Skip
+
+timeData = data.frame(time = c(tracks2016_points@data$Time, scats2016$Time) %>% as.POSIXct(format = "%H:%M:%S"), 
+                      RndBySt = c(tracks2016_points@data$RndBySt, scats2016$RndBySt), 
+                      Site = c(tracks2016_points@data$Site, scats2016$Site),
+                      type = c(rep('tracks', nrow(tracks2016_points)), rep('scats', nrow(scats2016)))
+                      )
+
+# Just looking at this, the scats have reasonable times - the tracks do not.
+timeData %>% filter(RndBySt == '07A1.Clearing') %>% group_by(type) %>% summarize(maxT = max(time),
+                                                                                 minT = min(time))
+timeData %>% filter(RndBySt == '12B2.Clearing') %>% group_by(type) %>% summarize(maxT = max(time),
+                                                                                  minT = min(time))
+
+timeData %>% 
+  ggplot() + 
+  geom_errorbar(aes(x = RndBySt, ymin = time %>% min, ymax = time %>% max, color = RndBySt, linetype = type)) + 
+  theme_bw()
+
+num = 12
+(start = -(num)+1)
+(end = start + num - 1)
+
+id = unique(timeData$RndBySt)
+
+(start = end + 1)
+(end = start + num - 1)
+
+timeData %>% group_by(RndBySt) %>% filter(RndBySt %in% id[start:end]) %>% 
+ggplot() + 
+  geom_errorbar(aes(x = "Time", ymax = TimeMax, ymin = TimeMin, color = type))
+
+# End skip
+
+# Problem - none of the scat collection times are aligned to the track times. -----------------------------------
+
+# Solution 1 - first scat of a transect inherits time of the closest track
+# point. Offset is measured, and all future scats time values within that
+# transect is offset by that amount. Scats then inherit the location of the
+# closest track point *in time*.
+
+# Solution 2 - all scats inherit the position of the closest track point.
+# Probably the most practical and straightforward method, but may result in a
+# few scats here or there being placed in the wrong replicate grid cell visit.
+# Perhaps not a big deal. 
+
+# DEPRECATED Solution 3 - The devices probably have a set deviation. What is this deviation? ------------------------------------------------------------------------
+
+grouped_timeData = timeData %>% group_by(RndBySt)
+
+groupsWithScat = attr(grouped_timeData, 'group_sizes') > 1
+
+grouped_timeDataWithScat = grouped_timeData[(attr(grouped_timeData, "indices")[groupsWithScat] %>% unlist) + 1,]
+
+timeDiffs = grouped_timeDataWithScat %>% summarize(timeDiffMin = diff(TimeMin),
+                                                   timeDiffMax = diff(TimeMax))
+
+timeDiffs_melt = reshape2::melt(timeDiffs)
+
+ggplot(data = timeDiffs_melt) + 
+  geom_point(aes(x = RndBySt, y = value, color = variable)) + 
+  scale_color_manual(values = c('blue', 'red'), name = 'Diff Type', labels = c("Difference in earliest time at the site",
+                                                                               "Difference in latest time at the site")) +
+  theme_bw() + ylab('Time Difference (h)') + xlab("Site Visit") + ggtitle("Time Disparity Between Collection & Track Times") + 
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank())
+
+# An idea: optimization problem, where the goal is to select offset the scat
+# collection times and take the track points nearest to those offset-times in
+# time, and minimize the total difference in space. Gonna be really time
+# consuming, basically solving an analysis on millions of points.
+
+# Time differences *usually* stable, but not good enough to employ over all scat/track combos. Go with solution 2; if this does not work, see if solution 1 works.
+
+# Solution 1 - Scats inherit the spatio-temporal information of the nearest track point in space. ------------------------------------------------------------------------
+
+# In doing so, we can tabulate from the get-go the order of visitation and
+# collection of the scats - if the scats contain the same spatio-temporal
+# information as the tracks, then we are essentially subsetting the tracks data
+# by **only** those with scats. 
+
+# Then, we can use rle() to get the order of visitation of the grid cells
+# (rle()$values), and since there are no tracks, just scats, the rle()$lengths
+# are the quantity of scats in those grid cells.
+
+# Fields faster
+microbenchmark::microbenchmark(rgeos = {rgeos::gDistance(scats2016_spdf[1,], tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',], byid = T)},
+                               fields = {fields::rdist(cbind(scats2016[1,"Easting"], scats2016[1,"Northing"]), coordinates(tracks2016_points[tracks2016_points$RndBySt == '09A1.Clearing',]))},
+                               times = 500)
+
+# Nearest track info
+
+nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dopar% {
+  
+  scatRndBySt = scats2016[i,]$RndBySt
+  
+  trackIndex = tracks2016_points@data$RndBySt == scatRndBySt
+  
+  track_local = tracks2016_points[trackIndex,]
+  
+  dists = fields::rdist(cbind(scats2016[i,"Easting"], scats2016[i,"Northing"]), 
+                        coordinates(track_local))
+  
+  nearestTrackPt = track_local[which.min(dists),] %>% data.frame
+  
+  if(min(dists) > 100){
+    
+    dists_alt = fields::rdist(cbind(scats2016[i,"Easting"], scats2016[i,"Northing"]), coordinates(tracks2016_points))
+    
+    nearestTrackPt = tracks2016_points[which.min(dists_alt),] %>% data.frame
+    
+    if(min(dists_alt) < min(dists)){
+      
+      error = T
+      
+      nearestTrackPt$Dist_alt = dists_alt[which.min(dists_alt)]
+      
+    } 
+    
+  } else { 
+    
+    error = F
+    
+    nearestTrackPt$Dist_alt = NA
+    
+  }
+  
+  
+  nearestTrackPt$Dist = dists[which.min(dists)]
+  nearestTrackPt$ScatEasting = scats2016[i,"Easting"]
+  nearestTrackPt$ScatNorthing = scats2016[i,"Northing"]
+  nearestTrackPt$Error = error
+  
+  
+  return(nearestTrackPt)
+  
+}
+
+nearestTracks %>% head
+
+nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01))
+
+nearestTracks[nearestTracks$Error == T,]
+
+scats2016[nearestTracks$Error == T,]
+
+# Some errors found 
+
+ggplot() + 
+  geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '07A1'), aes(x = Easting, y = Northing)) + 
+  # geom_text(data = tracks2016_points %>% data.frame %>% group_by(Site) %>% sample_n(1), aes(x = Easting, y = Northing, label = Site)) + 
+  geom_point(data = scats2016[nearestTracks$Error,] %>% filter(Site == '03A3'), aes(x = Easting, y = Northing), color = 'blue')
