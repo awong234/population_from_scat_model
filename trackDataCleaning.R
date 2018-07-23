@@ -557,7 +557,9 @@ nearestTracks = foreach(i = 1:nrow(scats2016), .combine = rbind.data.frame) %dop
 
 nearestTracks %>% head
 
-nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01)) # 96% of samples collected are within 13m of the nearest track point. Not bad.
+qTable = data.frame(Percentile = seq(0,100,by = 1), DistMoved = nearestTracks$Dist %>% quantile(prob = seq(0,1,by = 0.01))) # 96% of samples collected are within 13m of the nearest track point. Not bad.
+
+
 
 nearestTracks[nearestTracks$largeDist == T,]
 
@@ -565,6 +567,7 @@ scats2016[nearestTracks$largeDist == T,]
 
 # Some errors found - most corrected now. CLEANED.
 
-scatsReferenced = nearestTracks %>% select(Site:Northing, ScatEasting:largeDist)
+scatsReferenced = nearestTracks %>% select(Site:Northing, Dist:largeDist)
+scatsReferenced = scatsReferenced %>% rename(distMoved = Dist)
 
-save('scatsReferenced', file = 'scatsData.Rdata')
+save(list = c("scatsReferenced"), file = 'scatsData.Rdata')
