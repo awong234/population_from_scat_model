@@ -748,7 +748,7 @@ assessOutputs = function(f, file.list, analysisIDs, settings){
 
 # Data formatting ------------------------------------------------------------------
 
-makeGrid = function(tracks, data){
+makeGrid = function(tracks, data, buff = 300){
   
   startID = 1
   
@@ -779,8 +779,6 @@ makeGrid = function(tracks, data){
     bbox_tracks = bbox(coords)
     
     # Add a buffer
-    
-    buff = 300
     
     buffmat = matrix(c(-buff, -buff, buff, buff), nrow = 2, ncol = 2)
     
