@@ -14,7 +14,7 @@ tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer =
 
 scats2016 = read.csv(file = 'scatLocs2016_cleaned.csv', stringsAsFactors = F)
 
-load('scatsData.Rdata')
+load('scatsData_referenced.Rdata')
 
 attr(tracks2016_points@coords, 'dimnames') = list(NULL, c("Easting", "Northing"))
 
