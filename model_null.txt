@@ -1,12 +1,14 @@
-# Will probably have to restructure.
+# NULL MODEL, NO EFFECTS ON ANY PARAMETERS
+
 # Every 'site' will be a unique grid cell i. 
 # Every round t from 0 to maxT. 
 # Every visit v from 1 to maxV. THIS NEEDS TO BE REFERENCED PROPERLY WHEN CALCULATING THE MECHANISM OF N, y, and R!!!!!!
 
-# N should be allowed to vary by a covariate on Moose Transect.
+# constant lambda
 
-# theta should be allowed to vary by a covariate of Moose Transect and a spatial covariate. Ideally, it should be dependent upon days between visits. R[i,t] = dpois(theta[i] + beta1_MooseTEffect[MT] + beta2_)
+# constant theta
 
+# To do:
 # Estimate # moose within model. It will be calculated as (All deposition of scats after clearing) = ((theta[i]*tot_days / per_moose_daily_deposition[i]*tot_days[i]) = theta[i] / per_moose_daily_deposition)
 
 # The above is the total daily deposition rate divided by some assumed per-moose daily deposition rate.
@@ -16,15 +18,13 @@
 model
 {
     # Priors
-    p00 ~ dunif(0,1)
-    theta0 ~ dnorm(0,0.01) #prior for theta intercept
+    p00 ~ dunif(0,1) # May need to make this informative if no information present
+    theta00 ~ dnorm(0,0.01) #prior for theta intercept
     beta0 ~ dnorm(0,0.01) #prior for lambda intercept
-    beta_site ~ dnorm(0,0.01) #prior for Moose Transect intercept
-    beta_space ~ dnorm(0,0.01) #prior for habitat covariate
     
     # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
     lambda = exp(beta0) # immaterial except for mechanistic model of deposition process and observation.
-    theta = exp(theta0) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
+    theta0 = exp(theta00) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
     
     for(i in 1:nSites){
 
@@ -33,24 +33,25 @@ model
         # Before, y_t ~ Bin(N_t-1, p)
         # Now,    y_t ~ Bin(N_t, p)
         
-        # First N (in time 0) is Poisson random
+        # First N (in time 0) is Poisson random.
         N1[i] ~ dpois(lambda)
+        # Each site gets some theta as well.
+        theta[i] = theta0
 
         for(v in 1:maxV){
             N[i,1,v] = N1[i]
         }       
 
-        # First recruitment (in time 0) is 0
-        R[i,1] = 0
-
-        # First detection in time 0 is 0 (we didn't visit any sites in initial deposition). Unnecessary with vis[,,]
-        # p0[i,1,1:2] = 0
+        # Deposition between time 0 and first visit is found in days[i,1]
+        R[i,1] = dpois(theta[i]*days[i,1])
 
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
-        # Recruits are random poisson variates with mean theta.
-        # Remember that y[i,t] is the t-1 visit, so it makes sense that N_t should be dependent upon what was found in the previous visit.
+        # Recruits are random poisson variates with mean theta.        
+
         for(t in 2:maxT){
-            R[i,t] ~ dpois(theta) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits. Reformat potentially to dpois(theta*days[site,interval])
+            R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
+            # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time 
+
             N[i,t,1] = N[i,t-1,2] - y[i,t-1,2] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
             N[i,t,2] = N[i,t,1] - y[i,t,1] # Second visit to a sampling unit what's there is what was there after the first visit, minus what we picked up. 
         }
@@ -72,11 +73,7 @@ model
         }        
 
     }
-
-    for(t in 1:maxT){
-            N_time[t] = sum(N[,t,1]) # Don't really care about this too much.
-        }
-
-    # N_moose[i] = theta[i] / per_moose_deposition # something like this
+    
+    density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
 
 }
