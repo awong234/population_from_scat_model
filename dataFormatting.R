@@ -192,7 +192,7 @@ maxV = rleTracks %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}
 
 if(!skip){
 
-    # 9A1.Clearing has a grid cell that was visited 20 times...what does this look like?
+  # 9A1.Clearing has a grid cell that was visited 20 times...what does this look like?
   rleTracks %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% sapply(X = ., FUN = function(x){any(x == 20)}) %>% {which(.)}
   
   grid_local = grids[[which(siteOrder == '09A1')]]
@@ -230,6 +230,28 @@ allGridInfo = lapply(X = grids, FUN = function(x){x@data}) %>% do.call(what = rb
 row.names(allGridInfo) = NULL
 
 visitedGridInfo = visitedGridCells %>% left_join(y = allGridInfo, by = c("gridID" = "gridID"))
+
+# The row ordering of y (and thus vis, days) is arbitrary. 
+# At this point I am enforcing the rows of y to align to the ordering of the grid ID's in visitedGridInfo. This is also ordering the grid cells by time, since rleTracks is ordered by roundVisits, which is ordered by time.
+
+# Check 
+
+if(!skip){
+  
+  # All the RoundBySites are present
+  all(roundVisits$RndBySt == names(rleTracks))
+  
+  # All the sites are represented
+  identical(
+    roundVisits$Site %>% unique, visitedGridInfo$Site %>% unique
+  )
+  
+  # Notice : roundVisits is a record of all visits made, and drawn directly from tracks2016_points@data.
+  # visitedGridInfo instead is based on the UNIQUE gridID's that have been visited. It is also directly based on tracks2016_points if you go far back enough:
+  # visitedGridInfo$gridID <- rleTracks <- basedOn(roundVisits, tracks2016_points)
+  # As seen in the test after y is built, the subsetting is correct.
+}
+
 visitedGridInfo$y_row = 1:nrow(visitedGridInfo)
 
 rm(visitedGridCells, allGridInfo, visitedGridIDs)
@@ -285,7 +307,28 @@ if(!skip){
   y[check12B2$y_row, 2:5,] %>% colSums %>% rowSums
   # Is the same as . . . 
   scatsReferenced %>% filter(Site == '12B2') %>% group_by(RndBySt) %>% summarize(n = n())
+  scatsReferenced %>% filter(Site == '12B2') %>% group_by(RndBySt) %>% summarize(n = n()) %>% pull(n)
   # YES!
+  
+  # Check for all of them.
+  sites = visitedGridInfo %>% pull(Site) %>% unique
+  
+  test = vector(mode = 'logical', length = NROW(sites))
+  
+  for(i in 1:NROW(sites)){
+    
+    check = visitedGridInfo %>% filter(Site == sites[i])
+    y_collections = y[check12B2$y_row, 2:5,] %>% colSums %>% rowSums
+    data_collections = scatsReferenced %>% filter(Site == '12B2') %>% group_by(RndBySt) %>% summarize(n = n()) %>% pull(n)
+    
+    test[i] = all(
+      y_collections == data_collections
+    )
+    
+  }
+  
+  # All of the scats are represented.
+  all(test)
   
   collectionsByGridRound = apply(X = y, MARGIN = c(1,2), FUN = sum)
   
@@ -311,7 +354,7 @@ if(!skip){
 # maybe I can adapt make_y for this, just submitting the track points.
 
 # This gets how many track points fall in a particular replicate, on a particular round, on a particular grid cell. As if the track points were scat points. 
-vis = make_vis(gridInfo = visitedGridInfo, trackInfo = rleTracks, visitInfo = roundVisits, debug = T, siteToExamine = '12B2')
+vis = make_vis(gridInfo = visitedGridInfo, trackInfo = rleTracks, visitInfo = roundVisits, debug = F)
 
 # Just turn the numbers into 1's and 0's
 
@@ -372,6 +415,9 @@ if(!skip){
 
 # Replicate each row of diffDays_mat by however many grid cells are in that row's site.
 
+
+# Export data --------------------------------------------
+
 data = list(y = y,
             vis = vis,
             days = days,
@@ -379,5 +425,14 @@ data = list(y = y,
             maxT = maxT,
             maxV = maxV)
 
+# visitedGridInfo relates the gridID's from `grids` to the corresponding rows in y.
+# roundVisits provides ALL of the site/date combinations and rank of visit
+# grids are the grids surrounding all of the tracks, and one can use the grid ID's to relate rows in y to particular grid cells in `grids`
+metadata = list(visitedGridInfo = visitedGridInfo,
+                roundVisits = roundVisits,
+                grids = grids
+                )
+
 save(data, file = 'data_cleaned.Rdata')
+save(metadata, file = 'metadata.Rdata')
 
