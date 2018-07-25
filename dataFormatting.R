@@ -229,6 +229,10 @@ visitedGridCells = data.frame(gridID = visitedGridIDs %>% unique)
 allGridInfo = lapply(X = grids, FUN = function(x){x@data}) %>% do.call(what = rbind) %>% select(id, Site) %>% rename(gridID = id)
 row.names(allGridInfo) = NULL
 
+allGridLocations = lapply(X = grids, FUN = function(x){coordinates(x)}) %>% do.call(what = rbind)
+
+allGridInfo = cbind.data.frame(allGridInfo, allGridLocations)
+
 visitedGridInfo = visitedGridCells %>% left_join(y = allGridInfo, by = c("gridID" = "gridID"))
 
 # The row ordering of y (and thus vis, days) is arbitrary. 
@@ -254,7 +258,7 @@ if(!skip){
 
 visitedGridInfo$y_row = 1:nrow(visitedGridInfo)
 
-rm(visitedGridCells, allGridInfo, visitedGridIDs)
+rm(visitedGridCells, allGridInfo, allGridLocations, visitedGridIDs)
 
 
 # Get maxT, or total number of rounds -----------------------------------------------------------------------
