@@ -377,3 +377,13 @@ for(i in seq_along(diffDays_vector)){
 }
 
 diffDays_mat
+
+data = list(y = y,
+            vis = vis,
+            dayIntervals = diffDays_mat,
+            nSites = nGridsSampled,
+            maxT = maxT,
+            maxV = maxV)
+
+save(data, file = 'data_cleaned.Rdata')
+
