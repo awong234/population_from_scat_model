@@ -1043,6 +1043,37 @@ make_vis = function(gridInfo, trackInfo, visitInfo, debug = F, siteToExamine = N
   
 }
 
+make_days = function(diffDays, visitedGridInfo, maxT){ 
+  # diffDays should be the result of diffDays = roundVisits_with_time0 %>% group_by(Site) %>% do(out = diff(.$Date %>% as.Date()))
+  # That is to say, it should be a data.frame with a column of sites indicating the intervening days, and a column of lists with the day data in them.
+  
+  outmat = matrix(data = NA, nrow = nrow(visitedGridInfo), ncol = maxT - 1)
+  
+  for(i in 1:nrow(diffDays)){
+    # browser()
+    site = diffDays[i,]$Site
+    days = diffDays[i,]$out[[1]] %>% as.integer
+    
+    nZeros = (maxT - 1) - length(days)
+    
+    # Add zeros to the end of the vectors that are not of length maxT - 1
+    
+    if(nZeros > 0){
+      
+      days = c(days, rep(0, nZeros)) %>% as.integer
+      
+    } 
+    
+    index = visitedGridInfo %>% filter(Site == site) %>% pull(y_row)
+    # browser()
+    outmat[index,] = rep(days, each = length(index))
+    
+  }
+  
+  return(outmat)
+}
+
+
 # For selecting individual dplyr groups to view
 select_groups <- function(data, groups, ...) 
   data[sort(unlist(attr(data, "indices")[ groups ])) + 1, ]
