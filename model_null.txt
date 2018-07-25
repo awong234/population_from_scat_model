@@ -8,23 +8,15 @@
 
 # constant theta
 
-# To do:
-# Estimate # moose within model. It will be calculated as (All deposition of scats after clearing) = ((theta[i]*tot_days / per_moose_daily_deposition[i]*tot_days[i]) = theta[i] / per_moose_daily_deposition)
-
-# The above is the total daily deposition rate divided by some assumed per-moose daily deposition rate.
-
-# per_moose_deposition as a fixed effect will be a mean daily deposition rate. Or maybe estimate a random variable with a prior based on literature info.
+# moose density estimated from ratio of theta to a fixed parameter per_moose_deposition supplied as data. Can make random later.
 
 model
 {
     # Priors
     p00 ~ dunif(0,1) # May need to make this informative if no information present
     theta00 ~ dnorm(0,0.01) #prior for theta intercept
-    beta0 ~ dnorm(0,0.01) #prior for lambda intercept
+    lambda0 ~ dnorm(0,0.01) #prior for lambda intercept
     
-    # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
-    lambda = exp(beta0) # immaterial except for mechanistic model of deposition process and observation.
-    theta0 = exp(theta00) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
     
     for(i in 1:nSites){
 
@@ -34,17 +26,22 @@ model
         # Now,    y_t ~ Bin(N_t, p)
         
         # First N (in time 0) is Poisson random.
-        N1[i] ~ dpois(lambda)
-        # Each site gets some theta as well.
-        theta[i] = theta0
+        N1[i] ~ dpois(lambda[i])
+        # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
 
+        # Linear model for lambda.  Include fixed/random effects here later
+        lambda[i] = exp(lambda0) # immaterial except for mechanistic model of deposition process and observation.
+        
         for(v in 1:maxV){
             N[i,1,v] = N1[i]
         }       
 
         # Deposition between time 0 and first visit is found in days[i,1]
         R[i,1] = dpois(theta[i]*days[i,1])
-
+        
+        # Linear model for theta. Include fixed/random effects here later
+        theta[i] = exp(theta00) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
+        
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.        
 
