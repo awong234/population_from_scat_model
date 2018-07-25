@@ -828,17 +828,20 @@ rlePoints = function(visitInfo, points, grids, plots = F, animation = F){
       p = ggplot() + 
         geom_tile(data = grid_site %>% data.frame, aes(x = x, y = y), color = 'black', fill = NA) + 
         geom_text(data = grid_site %>% data.frame, aes(x = x, y = y, label = id), color = 'gray20', alpha = 0.5, size = 2) + 
+        geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == site), aes(x = Easting, y = Northing), alpha = 0.5) + 
         coord_equal() + theme_bw()
       
       if(nrow(points_visit) > 0){
         p = p + geom_point(data = points_visit %>% data.frame, aes(x = Easting, y = Northing), color = 'red')
       }
+      
       print(p)
       
     }
     
     intersect = rle(over(x = points_visit, y = grid_site)$id)
     # browser()
+    # make sure `over` doesn't change order of points from temporally arranged - it does not
     
     # browser()
     if(animation){
@@ -850,7 +853,7 @@ rlePoints = function(visitInfo, points, grids, plots = F, animation = F){
       while(currentPt <= nrow(points_visit)){
         currentPt = points_visit[current,]
         
-        Cairo::Cairo(width = 500, height = 500, file = paste0('images/anim/img',current,'.png'), dpi = 100)
+        # Cairo::Cairo(width = 500, height = 500, file = paste0('images/anim/img',current,'.png'), dpi = 100)
         print(
           ggplot() + 
             geom_tile(data = grid_site %>% data.frame, aes(x = x, y = y), color = 'black', fill = NA) + 
@@ -860,7 +863,7 @@ rlePoints = function(visitInfo, points, grids, plots = F, animation = F){
             coord_equal(xlim = currentPt$Easting + c(-windowBuff, windowBuff), ylim = currentPt$Northing - c(-windowBuff, windowBuff)) + theme_bw() + 
             theme(axis.text = element_blank(), axis.title = element_blank())
         )
-        dev.off()
+        # dev.off()
         
         current = current + by
         
@@ -875,3 +878,172 @@ rlePoints = function(visitInfo, points, grids, plots = F, animation = F){
   
   return(intersections)
 }
+
+siteVisitRank = function(sortedSites){
+  
+  # Sort sites by SITE then DATE
+  
+  siteRLE = rle(sortedSites)
+  
+  visitRank = lapply(siteRLE$lengths, FUN = function(x){seq(1,x)})
+  
+  visitRank = do.call(what = c, args = visitRank)
+  
+  return(visitRank)
+  
+}
+
+make_y = function(gridInfo, scatInfo, visitInfo, debug = F, siteToExamine = NULL){
+  
+  # if(debug){browser()}
+  
+  for(i in seq_along(scatInfo)){
+    
+    rleScats.df = do.call(what = cbind.data.frame, args = scatInfo[[i]])
+    
+    if(nrow(rleScats.df) == 0){next}
+    
+    if(debug){
+      
+      site = visitInfo[i,]$Site
+      ID = visitInfo[i,]$RndBySt
+      
+    }
+    
+    orderValue = order(rleScats.df$value)
+    
+    rleGridCells = rle(rleScats.df$values[orderValue])
+    
+    rleScats.df$rep[orderValue] = {lapply(rleGridCells$lengths, FUN = function(x){seq(1,x)}) %>% do.call(what = c)}
+    
+    visitRank = visitInfo[i,]$VisitRank
+    scatCounts = rleScats.df$lengths
+    gridsVisited = rleScats.df$values
+    
+    # For testing
+    gridIndex_all = which(gridInfo$gridID %in% gridsVisited)
+    
+    replicate = rleScats.df$rep
+    maxV = max(replicate)
+    
+    # if(debug){browser()}
+    
+    for(v in 1:maxV){
+      
+      gridIndex = which(gridInfo$gridID %in% gridsVisited[replicate == v])
+      repIndex = replicate == v
+      
+      y[gridIndex, visitRank + 1, v] = scatCounts[repIndex]
+      
+    }
+    
+    
+    if(debug){
+      if(site == siteToExamine){
+        browser()
+        
+        print(site)
+        print(ID)
+        
+        grid_local = grids[[site]]
+        scats_local = scatsReferenced %>% filter(RndBySt == ID)
+        windowBuff = 50
+        
+        ggplot() + 
+          geom_tile(data = grid_local %>% data.frame, aes(x = x, y = y), fill = NA, color = 'black') + 
+          geom_text(data = grid_local %>% data.frame, aes(x = x, y = y, label = id), color = 'gray50', size = 3) + 
+          geom_point(data = tracks2016_points %>% data.frame %>% filter(RndBySt == ID), aes(x = Easting, y = Northing), shape = 1) +
+          geom_point(data = scats_local %>% data.frame, aes(x = Easting, y = Northing, color = 'red')) + 
+          coord_equal(xlim = c(min(scats_local$Easting) + c(-windowBuff,windowBuff), max(scats_local$Easting) + c(-windowBuff,windowBuff)), 
+                      ylim = c(min(scats_local$Northing) + c(-windowBuff,windowBuff), max(scats_local$Northing) + c(-windowBuff,windowBuff)))
+        
+        
+      }
+      
+    }
+    
+  }
+  
+  return(y)
+  
+}
+
+make_vis = function(gridInfo, trackInfo, visitInfo, debug = F, siteToExamine = NULL){
+  
+  if(debug){browser()}
+  
+  for(i in seq_along(trackInfo)){
+    
+    rleTracks.df = do.call(what = cbind.data.frame, args = trackInfo[[i]])
+    
+    if(nrow(rleTracks.df) == 0){next}
+    
+    if(debug){
+      
+      site = visitInfo[i,]$Site
+      ID = visitInfo[i,]$RndBySt
+      
+    }
+    
+    orderValue = order(rleTracks.df$value)
+    
+    rleGridCells = rle(rleTracks.df$values[orderValue])
+    
+    rleTracks.df$rep[orderValue] = {lapply(rleGridCells$lengths, FUN = function(x){seq(1,x)}) %>% do.call(what = c)}
+    
+    visitRank = visitInfo[i,]$VisitRank
+    scatCounts = rleTracks.df$lengths
+    gridsVisited = rleTracks.df$values
+    
+    # For testing
+    gridIndex_all = which(gridInfo$gridID %in% gridsVisited)
+    
+    replicate = rleTracks.df$rep
+    maxV = max(replicate)
+    
+    # if(debug){browser()}
+    
+    for(v in 1:maxV){
+      
+      gridIndex = which(gridInfo$gridID %in% gridsVisited[replicate == v])
+      repIndex = replicate == v
+      
+      y[gridIndex, visitRank + 1, v] = scatCounts[repIndex]
+      
+    }
+    
+    
+    if(debug){
+      if(site == siteToExamine){
+        browser()
+        
+        print(site)
+        print(ID)
+        
+        grid_local = grids[[site]]
+        scats_local = scatsReferenced %>% filter(RndBySt == ID)
+        windowBuff = 50
+        
+        ggplot() + 
+          geom_tile(data = grid_local %>% data.frame, aes(x = x, y = y), fill = NA, color = 'black') + 
+          geom_text(data = grid_local %>% data.frame, aes(x = x, y = y, label = id), color = 'gray50', size = 3) + 
+          geom_point(data = tracks2016_points %>% data.frame %>% filter(RndBySt == ID), aes(x = Easting, y = Northing), shape = 1) +
+          geom_point(data = scats_local %>% data.frame, aes(x = Easting, y = Northing, color = 'red')) + 
+          coord_equal(xlim = c(min(scats_local$Easting) + c(-windowBuff,windowBuff), max(scats_local$Easting) + c(-windowBuff,windowBuff)), 
+                      ylim = c(min(scats_local$Northing) + c(-windowBuff,windowBuff), max(scats_local$Northing) + c(-windowBuff,windowBuff)))
+        
+        
+      }
+      
+    }
+    
+  }
+  
+  return(y)
+  
+}
+
+# For selecting individual dplyr groups to view
+select_groups <- function(data, groups, ...) 
+  data[sort(unlist(attr(data, "indices")[ groups ])) + 1, ]
+
