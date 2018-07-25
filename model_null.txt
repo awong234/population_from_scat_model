@@ -37,17 +37,17 @@ model
         }
 
         # Deposition between time 0 and first visit is found in days[i,1]
-        R[i,1] = dpois(theta[i]*days[i,1])
-        
+        for(t in 1:maxT - 1){
+            R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
+            # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time
+        }
         # Linear model for theta. Include fixed/random effects here later
         theta[i] = exp(theta00) # extend to include moose transect effect, spatial covariate effects. This is deposition per grid cell i, and therefore # moose will be calculated as per grid cell. 
         
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.        
 
-        for(t in 2:maxT){
-            R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
-            # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time 
+        for(t in 2:maxT){            
 
             N[i,t,1] = N[i,t-1,maxV] - y[i,t-1,maxV] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
 
