@@ -25,16 +25,16 @@ model
         # Before, y_t ~ Bin(N_t-1, p)
         # Now,    y_t ~ Bin(N_t, p)
         
-        # First N (in time 0) is Poisson random.
+        # Initial deposition is Poisson random, and occurs on June 1, 2016 (arbitrary selection, but is the first visit to any site).
         N1[i] ~ dpois(lambda[i])
         # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
 
         # Linear model for lambda.  Include fixed/random effects here later
-        lambda[i] = exp(lambda0) # immaterial except for mechanistic model of deposition process and observation.
+        lambda[i] = exp(lambda0) # somewhat immaterial except for mechanistic model of deposition process and observation.
         
         for(v in 1:maxV){
             N[i,1,v] = N1[i]
-        }       
+        }
 
         # Deposition between time 0 and first visit is found in days[i,1]
         R[i,1] = dpois(theta[i]*days[i,1])
@@ -49,8 +49,12 @@ model
             R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
             # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time 
 
-            N[i,t,1] = N[i,t-1,2] - y[i,t-1,2] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
-            N[i,t,2] = N[i,t,1] - y[i,t,1] # Second visit to a sampling unit what's there is what was there after the first visit, minus what we picked up. 
+            N[i,t,1] = N[i,t-1,maxV] - y[i,t-1,maxV] + R[i,t-1] # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
+
+            for(v in 2:maxV){
+                N[i,t,v] = N[i,t,v-1] - y[i,t,v-1] # Subsequent visits to a sampling unit what's there is what was there after the first visit, minus what we picked up, all the way to maxV (20 in 2016).
+            }
+            
         }
         
         # Observation likelihood. Counts are conditional on population size at previous time step (after recruits and removals), and detection (which also depends on having visited the site).
@@ -66,11 +70,13 @@ model
 
                 y[i,t,v] ~ dbin(p[i,t,v], N[i,t,v])
 
-            }            
-        }        
+            } 
+        }
+
+        density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
 
     }
     
-    density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
+    
 
 }
