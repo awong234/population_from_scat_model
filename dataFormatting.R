@@ -81,11 +81,16 @@ if(!skip){
 
 # Get records of visitations to each grid cell, by ID, and the quantity of scats picked up -----------------------------------------------------------
 
+
 # Two things to do 
 
 # FIRST - overall visitation to cells (using the track points data) -------------------------------------------------------
 
-roundVisits = tracks2016_points@data %>% select(Site, RndBySt, Date) %>% unique %>% arrange(Date)
+roundVisits = tracks2016_points@data %>% select(Site, Date, RndBySt) %>% unique %>% arrange(Site, Date)
+
+roundVisits$VisitRank = siteVisitRank(sortedSites = roundVisits$Site)
+
+roundVisits = roundVisits %>% arrange(Date)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -112,57 +117,41 @@ names(rleScats) = roundVisits$RndBySt
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-
-# Get records of intervals between visits. For each site, what are the days between the visits?
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-diffDays = tracks2016 %>% data.frame %>% group_by(Site) %>% do(out = diff(.$Date %>% as.Date()))
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-
-
-# Some are only visited once, which are not useful for us. Which ones are these
-
-whichSingleVisit = diffDays$out %>% lapply(FUN = length) %>% {which(. == 0)}
-
-sites =  tracks2016 %>% data.frame %>% pull(Site) %>% unique
-
-singleVisit = sites[whichSingleVisit]
-
-# we don't want these. Save this for later.
-
-# Time intervals - not consistent enough to use intersection$length as a covariate. Sometimes 1s, 5s, 30s, etc.
-
 if(!skip){
-  trackIntervals = tracks2016_points %>% data.frame %>% group_by(RndBySt) %>% do(out = diff(.$Time %>% as.POSIXct()))
-  trackIntervals$out %>% lapply(FUN = function(x){summary(x %>% as.integer)})
-}
-
-# How many replicated observations? oof . . . 27 replicated visits out of 5
-
-rleScats %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% unlist %>% table
-rleTracks %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% unlist %>% table
-
-# Look at 266; 9A1.Sample1
-
-grid_local = grids[[which(siteOrder == '09A3')]]
-scats_local = scatsReferenced_spdf[scatsReferenced$RndBySt == '09A3.Sample1',]
-
-rle(over(x = scats_local, y = grid_local)$id)
-
-ggplot() + 
-  geom_tile(data = grid_local %>% data.frame, aes(x = x, y = y), fill = NA, color = 'black') + 
-  geom_text(data = grid_local %>% data.frame, aes(x = x, y = y, label = id), color = 'gray50', size = 3) + 
-  geom_point(data = tracks2016_points %>% data.frame %>% filter(RndBySt == '09A3.Sample1'), aes(x = Easting, y = Northing), shape = 1) +
-  geom_point(data = scats_local %>% data.frame, aes(x = Easting, y = Northing, color = 'red')) + 
-  coord_equal(xlim = c(min(scats_local$Easting) + c(-100,100), max(scats_local$Easting) + c(-100,100)), 
-              ylim = c(min(scats_local$Northing) + c(-100,100), max(scats_local$Northing) + c(-100,100)))
   
+  # Time intervals - not consistent enough to use intersection$length as a covariate. Sometimes 1s, 5s, 30s, etc.
+  
+  if(!skip){
+    trackIntervals = tracks2016_points %>% data.frame %>% group_by(RndBySt) %>% do(out = diff(.$Time %>% as.POSIXct()))
+    trackIntervals$out %>% lapply(FUN = function(x){summary(x %>% as.integer)})
+  }
+  
+  # How many replicated observations? oof . . . 27 replicated visits out of 5
+  
+  rleScats %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% unlist %>% table
+  tracksDup = {rleTracks %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% unlist %>% table %>% data.frame}
+  tracksDup$Dups = tracksDup$.
+  tracksDup = tracksDup %>% select(Freq, Dups) %>% mutate(Dups = Dups %>% as.integer)
+  
+  sum(tracksDup$Freq[tracksDup$Dups > 1])/sum(tracksDup$Freq)
+  
+  # Look at 266; 9A1.Sample1
+  
+  grid_local = grids[[which(siteOrder == '09A3')]]
+  scats_local = scatsReferenced_spdf[scatsReferenced$RndBySt == '09A3.Sample1',]
+  
+  rle(over(x = scats_local, y = grid_local)$id)
+  
+  ggplot() + 
+    geom_tile(data = grid_local %>% data.frame, aes(x = x, y = y), fill = NA, color = 'black') + 
+    geom_text(data = grid_local %>% data.frame, aes(x = x, y = y, label = id), color = 'gray50', size = 3) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(RndBySt == '09A3.Sample1'), aes(x = Easting, y = Northing), shape = 1) +
+    geom_point(data = scats_local %>% data.frame, aes(x = Easting, y = Northing, color = 'red')) + 
+    coord_equal(xlim = c(min(scats_local$Easting) + c(-100,100), max(scats_local$Easting) + c(-100,100)), 
+                ylim = c(min(scats_local$Northing) + c(-100,100), max(scats_local$Northing) + c(-100,100)))
 
+  
+}
 
 # Format as needed by model ------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -192,8 +181,9 @@ ggplot() +
 
 # There is a matrix of visitation, indicating whether grid cells i were visited in round t, with replicate v; all 1's or 0's. If the grid cell was not visited, then p(observation) = 0 by way of multiplication: p[i,t,v] = p0[i,t,v] * vis[i,t,v]. P(observation) in t = 1 (initial deposition) is 0. 
 
-# Get y from rleScats --------------------------------------------------------------------------------------------------------------------------------
+# Site metadata  --------------------------------------------------------------------------------------------------------------------------------
 
+# Get maxV --------------------------------------------------------
 # Why am I using tracks in the next line? Well, I need to format y such that, if a grid cell was visited 20 times
 
 maxV = rleTracks %>% lapply(FUN = function(x){x$values %>% table %>% as.integer}) %>% unlist %>% max 
@@ -220,4 +210,170 @@ if(!skip){
   # End skip
 }
 
+# Get maxI, or total number of grid cells ever visited -------------------------------------------------
 
+# Again, why am I using rleTracks? I need to know ALL of the grid cells I ever crossed, whether we found anything or not, to build y properly.
+
+visitedGridIDs = foreach(i = seq_along(rleScats), .combine = c) %do% {
+  
+  rleTracks[[i]]$values
+  
+}
+
+nGridsSampled = visitedGridIDs %>% unique %>% NROW
+
+visitedGridCells = data.frame(gridID = visitedGridIDs %>% unique)
+
+# Only need visited grids - that's in allGridIDs
+
+allGridInfo = lapply(X = grids, FUN = function(x){x@data}) %>% do.call(what = rbind) %>% select(id, Site) %>% rename(gridID = id)
+row.names(allGridInfo) = NULL
+
+visitedGridInfo = visitedGridCells %>% left_join(y = allGridInfo, by = c("gridID" = "gridID"))
+visitedGridInfo$y_row = 1:nrow(visitedGridInfo)
+
+rm(visitedGridCells, allGridInfo, visitedGridIDs)
+
+
+# Get maxT, or total number of rounds -----------------------------------------------------------------------
+
+# Can use the tracks points data frame for this
+
+maxT = {scats2016 %>% pull(RoundNo) %>% unique %>% length} + 1
+
+if(!skip){
+  
+  # Intuition. The rle$values provides the order of visitation for grid cells. rle$lengths provides the quantity of scats found per grid cell. This is easily adapted to y. 
+  rleScats$`12B2.Clearing` %>% do.call(what = cbind.data.frame, args = .)
+  
+  ID = '09A1.Clearing'
+  Site = '09A1'
+  grid_local = grids[[which(siteOrder == Site)]]
+  scats_local = scatsReferenced_spdf[scatsReferenced$RndBySt == ID,]
+  
+  over(scats_local, grid_local)
+  
+  # It looks like that tough part in the left hand side.
+  ggplot() + 
+    geom_tile(data = grid_local %>% data.frame, aes(x = x, y = y), fill = NA, color = 'black') + 
+    geom_text(data = grid_local %>% data.frame, aes(x = x, y = y, label = id), color = 'gray50', size = 3) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(RndBySt == ID), aes(x = Easting, y = Northing), shape = 1) +
+    geom_point(data = scats_local %>% data.frame, aes(x = Easting, y = Northing, color = 'red')) + 
+    coord_equal(xlim = c(min(scats_local$Easting) + c(-100,100), max(scats_local$Easting) + c(-100,100)), 
+                ylim = c(min(scats_local$Northing) + c(-100,100), max(scats_local$Northing) + c(-100,100)))
+  
+  
+}
+
+# y matrix -------------------------------------------------------------------------------------------
+
+# This will be total number of scats found at a grid cell. Might end up providing covariates in this data frame later.
+
+# Build skeleton
+y = array(data = 0, dim = c(nGridsSampled, maxT, maxV))
+# Fill in with data
+y = make_y(gridInfo = visitedGridInfo, scatInfo = rleScats, visitInfo = roundVisits, debug = F)
+
+
+if(!skip){
+  
+  # Check to see that it was put together correctly
+  
+  check12B2 = visitedGridInfo %>% filter(Site == '12B2')
+  
+  # Scats collected per round 
+  y[check12B2$y_row, 2:5,] %>% colSums %>% rowSums
+  # Is the same as . . . 
+  scatsReferenced %>% filter(Site == '12B2') %>% group_by(RndBySt) %>% summarize(n = n())
+  # YES!
+  
+  collectionsByGridRound = apply(X = y, MARGIN = c(1,2), FUN = sum)
+  
+  collectionsByGridRound = collectionsByGridRound[(collectionsByGridRound %>% rowSums()) > 0,]
+  
+  Cairo::Cairo(width = 1024*3, height = 760*3, file = 'images/collectionsPerRound.png', dpi = 150*3)
+  collectionsByGridRound %>% data.frame %>% rename(Round0 = X1, Round1 = X2, Round2 = X3, Round3 = X4, Round4 = X5) %>% mutate(gridID = 1:nrow(.)) %>% reshape2:::melt.data.frame(id.vars = 'gridID', measure.vars = c(1:5)) %>% filter(variable != "Round0") %>% 
+    ggplot() + 
+    geom_point(aes(x = variable, y = value)) + 
+    geom_line(aes(x = variable, y = value, group = gridID), size = 4, alpha = 0.01) + 
+    theme_bw() + theme(axis.title.x = element_blank()) + ylab("Collections Made")
+  dev.off()
+  
+}
+
+
+# Vis matrix ------------------------------------------------------------------------------------
+
+# Same dimension of y[,,], but it's not just 'where y == 0', because
+# there are PLENTY of grid cells that were searched, perhaps multiple times,
+# where no scats were found.
+
+# maybe I can adapt make_y for this, just submitting the track points.
+
+# This gets how many track points fall in a particular replicate, on a particular round, on a particular grid cell. As if the track points were scat points. 
+vis = make_vis(gridInfo = visitedGridInfo, trackInfo = rleTracks, visitInfo = roundVisits, debug = T, siteToExamine = '12B2')
+
+# Just turn the numbers into 1's and 0's
+
+vis = (vis > 0) + 0 
+
+# Double check - are all vis == 1 where y > 0? 
+
+# TRUE
+all(vis[y > 0] == 1)
+
+# days interval matrix ------------------------------------------------------------------------------------
+
+# We need to set N[i,1,v] to be June 1, 2016. Why? Some sites we did not get to visit until later that month! In fact, 12B1 was only first visited on July 4. 
+
+# Therefore, having N[i,1,v] occur on a fixed date allows us to use theta[i,int] to account for the disparity in clearing date. We can assume all N[i,1,v] are Poisson random if we fix it to be the same date, but they will be different (with a left-skew in distribution) if we do not, and assume that N[i,1,v] is simply the deposition immediately before the first visit. 
+
+# This allows more inference into theta; we can attribute *a little* bit of the variance in clearing counts due to the temporal lag between sites; all else being equal, a site sampled at a later date should have more collections on it. 
+
+# So, what this means is that we need to append a 'pretend' round visit to roundVisits that consists of 'visiting' all the sites on June 1, and calculating the diffDays again.
+
+depositionDays = data.frame(Site = roundVisits$Site %>% unique, Date = '2016-06-01', VisitRank = 0, stringsAsFactors = F) %>% mutate(RndBySt = paste0(Site, '.Deposition'))
+
+roundVisits_with_time0 = tracks2016_points@data %>% select(Site, Date, RndBySt) %>% unique %>% arrange(Site, Date)
+
+roundVisits_with_time0$VisitRank = siteVisitRank(sortedSites = roundVisits_with_time0$Site)
+
+roundVisits_with_time0 = roundVisits_with_time0 %>% bind_rows(depositionDays) %>% arrange(Date, VisitRank)
+
+
+# Get records of intervals between visits. For each site, what are the days between the visits?
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+diffDays = roundVisits_with_time0 %>% group_by(Site) %>% do(out = diff(.$Date %>% as.Date()))
+names(diffDays$out) = {roundVisits_with_time0 %>% group_by(Site) %>% attr('labels')}$Site
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+select_groups(roundVisits_with_time0 %>% group_by(Site), group = 12)
+
+diffDays$out[[12]]
+
+# Some sites not visited a total of four times, so the matrix is not of stable dimension. Since vis[,,] == 0 after the last visit, it shouldn't really matter what diffDays is after the last visit. Constrain to 0.
+
+nZeros = lapply(diffDays$out, FUN = function(x){4 - length(x)})
+
+diffDays_vector = diffDays$out %>% lapply(FUN = function(x){x %>% as.integer})
+
+diffDays_mat = matrix(data = NA, nrow = length(diffDays_vector), ncol = 4)
+
+for(i in seq_along(diffDays_vector)){
+  
+  if(nZeros[i] > 0){
+    
+    diffDays_mat[i,] = c(diffDays_vector[[i]], rep(0, nZeros[i]))
+    
+  } else {
+    
+    diffDays_mat[i,] = diffDays_vector[[i]]
+    
+  }
+  
+}
+
+diffDays_mat
