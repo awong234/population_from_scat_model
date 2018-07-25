@@ -352,35 +352,29 @@ names(diffDays$out) = {roundVisits_with_time0 %>% group_by(Site) %>% attr('label
 
 select_groups(roundVisits_with_time0 %>% group_by(Site), group = 12)
 
-diffDays$out[[12]]
+# Ok, this is good, it is referenced by site. But, it needs to be referenced by each grid cell now, since the model is structured as days[i,t].
+# The rows of y are referenced by visitedGridInfo.
 
-# Some sites not visited a total of four times, so the matrix is not of stable dimension. Since vis[,,] == 0 after the last visit, it shouldn't really matter what diffDays is after the last visit. Constrain to 0.
+days = make_days(diffDays = diffDays, visitedGridInfo = visitedGridInfo, maxT = maxT)
 
-nZeros = lapply(diffDays$out, FUN = function(x){4 - length(x)})
-
-diffDays_vector = diffDays$out %>% lapply(FUN = function(x){x %>% as.integer})
-
-diffDays_mat = matrix(data = NA, nrow = length(diffDays_vector), ncol = 4)
-
-for(i in seq_along(diffDays_vector)){
+if(!skip){
   
-  if(nZeros[i] > 0){
-    
-    diffDays_mat[i,] = c(diffDays_vector[[i]], rep(0, nZeros[i]))
-    
-  } else {
-    
-    diffDays_mat[i,] = diffDays_vector[[i]]
-    
-  }
+  # Check to see that it's right. Look at 12B2. It's right.
+  
+  roundVisits %>% filter(Site == '12B2') # Four visits
+  diffDays %>% filter(Site == '12B2') %>% pull(out)
+  index = visitedGridInfo %>% filter(Site == '12B2') %>% pull(y_row)
+  
+  days[index,] %>% unique
+  
   
 }
 
-diffDays_mat
+# Replicate each row of diffDays_mat by however many grid cells are in that row's site.
 
 data = list(y = y,
             vis = vis,
-            dayIntervals = diffDays_mat,
+            days = days,
             nSites = nGridsSampled,
             maxT = maxT,
             maxV = maxV)
