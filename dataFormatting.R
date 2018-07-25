@@ -214,7 +214,7 @@ if(!skip){
 
 # Again, why am I using rleTracks? I need to know ALL of the grid cells I ever crossed, whether we found anything or not, to build y properly.
 
-visitedGridIDs = foreach(i = seq_along(rleScats), .combine = c) %do% {
+visitedGridIDs = foreach(i = seq_along(rleTracks), .combine = c) %do% {
   
   rleTracks[[i]]$values
   
