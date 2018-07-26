@@ -69,3 +69,5 @@ niter = 1e5
 nburn = niter/4
 
 jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+
+save(jagsOut, file = 'modelOutputs/out_null.Rdata')
