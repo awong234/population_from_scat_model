@@ -37,7 +37,7 @@ model
         }
 
         # Deposition between time 0 and first visit is found in days[i,1]
-        for(t in 1:maxT - 1){
+        for(t in 1:(maxT - 1)){
             R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
             # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time
         }
