@@ -1,3 +1,19 @@
+# 2018-07-27
+
+NIMBLE & JAGS still running as of 11:20. JAGS was duplicated on Angela's computer shortly after starting it on my computer for redundancy purposes, and NIMBLE is running on my work computer.
+
+Will begin writing introduction, finalizing methods today.
+
+# 2018-07-26
+
+Time slipped away for two days. In summary, between 07-24 and 07-25 I succeeded in specifying the BUGS model, and feeding the data into it with all the appropriate formats. The model has been running since 07-25 at approximately 6PM. 
+
+Today, the model is still running, currently at 19 hours running. I am attempting to build the model in NIMBLE but it is taking a long time simply to build the *model*, much less begin running the MCMC evaluation. The NIMBLE implementation began running at around 8PM.
+
+## Manuscript preparation
+
+The methods section of the manuscript is fairly close to done. 
+
 # 2018-07-23
 
 ## Formatting data
