@@ -48,7 +48,7 @@ data$per_moose_deposition = mean(defecationRates$mean)
 
 # JAGS part
 
-params = c("theta00", "p00", "lambda", "density")
+params = c("theta00", "p00", "lambda0")
 
 # what to initialize? in the sims, we needed to initialize R, and N1. 
 
@@ -68,9 +68,17 @@ inits = function(){
 niter = 1e5
 nburn = niter/4
 
+a = Sys.time()
 jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+b = Sys.time()
+
+b - a
 
 save(jagsOut, file = 'modelOutputs/out_null.Rdata')
+
+beepr::beep()
+
+system(command = 'python sendMail.py')
 
 # Try nimble
 library(nimble)
@@ -167,8 +175,6 @@ model = nimbleModel(code = modCode, data = modData, inits = modInits, constants 
 Cmodel = compileNimble(model)
 
 Cmodel_conf = configureMCMC(Cmodel)
-
-Cmodel_conf$addMonitors(c("lambda", "theta", "density"))
 
 Cmodel_MCMC = buildMCMC(Cmodel_conf)
 
