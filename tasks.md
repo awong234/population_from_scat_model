@@ -20,8 +20,8 @@
 
 ## Scat Data
 
-* [ ] Make scats inherit location from nearest point in corresponding track. 
-* [ ] Reference scats to grid cells, indicate whether first, second, third, etc. replicate.
+* [x] Make scats inherit location from nearest point in corresponding track. 
+* [x] Reference scats to grid cells, indicate whether first, second, third, etc. replicate.
 
 ## Covariate Data
 
@@ -35,15 +35,15 @@
 ## Analysis
 
 * [ ] Make model work according to commentary in `model.txt` file
-* [ ] Format data. Need:
-    * [ ] Index of transect ID as data
-    * [ ] Interval between visits as data
+* [x] Format data. Need:
+    * [x] Index of transect ID as data
+    * [x] Interval between visits as data
 * [ ] Summarize model output
 
 ## Writing
 
-* [ ] Import intro from deprecated Ch 1. 
-* [ ] Methods
+* [ ] Revise intro based on Angela's comments
+* [x] Methods
 * [ ] Results
 * [ ] Discussion
     * [ ] Don't forget commentary about model extensions
