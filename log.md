@@ -1,3 +1,17 @@
+# 2018-07-31
+
+Made plans for covariates, see `tasks.md`. Models not finished running
+
+# 2018-07-30
+
+No work done, decision has been made to postpone defense.
+
+# 2018-07-29
+
+JAGS run on my computer failed, due to tracking either `lambda[i]`, `density[i]`, or `theta[i]`. There are too many of these parameters and my computer probably ran out of memory. The problem will probably persist with the redundancies started on the 27th. 
+
+The run on my computer has been restarted as of ~11AM.
+
 # 2018-07-27
 
 NIMBLE & JAGS still running as of 11:20. JAGS was duplicated on Angela's computer shortly after starting it on my computer for redundancy purposes, and NIMBLE is running on my work computer.
