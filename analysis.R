@@ -161,7 +161,7 @@ modCode = nimbleCode({
       } 
     }
     
-    density[i] <- (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
+    #density[i] <- (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
     
   }
   
@@ -183,17 +183,29 @@ modData = list(
 )
 
 modInits = list(
-  N1 = rowSums(y)
+  N1 = rowSums(y),
+  theta00 = -6,
+  lambda0 = -4,
+  p00 = 0.5
 )
 
 model = nimbleModel(code = modCode, data = modData, inits = modInits, constants = modConsts)
-
 Cmodel = compileNimble(model)
 
-Cmodel_conf = configureMCMC(Cmodel)
+model_MCMC = buildMCMC(model)
+Cmodel_MCMC = compileNimble(model_MCMC, project = model)
 
-Cmodel_MCMC = buildMCMC(Cmodel_conf)
+niter = 100000
 
-niter = 10000
+a = Sys.time()
+Cmodel_MCMC$run(niter, reset = F)
+b = Sys.time()
 
-Cmodel_MCMC$run(niter)
+b - a
+
+system(command = 'python sendMail.py')
+
+modelSamples = as.matrix(Cmodel_MCMC$mvSamples)
+coda_modelSamples = coda::mcmc(modelSamples)
+coda::traceplot(coda_modelSamples)
+
