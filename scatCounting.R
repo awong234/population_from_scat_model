@@ -325,3 +325,154 @@ message(paste0('Started at ', Sys.time()))
 foreach(i = sequence, .packages = c("dplyr", "jagsUI")) %dopar% {
   runFunc(comboSet = combos, iteration = i, gridsVisited = gridsVisited)
 }
+
+
+### Experimental idea - exposure model ################################################################################
+
+# Try out exposure model for 12B2. 
+
+# Setup & data
+
+library(dplyr)
+
+source('functions.R')
+
+tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer = 'tracks2016_points_clean', stringsAsFactors = F)
+
+load('scatsData_referenced.Rdata')
+
+# Off the bat, I know that it will be difficult to integrate 'exposure' over time 
+# Instantaneous Exposure = E_0 * f(dist) ; dist = dist(point, scat)
+# Cumulative exposure = \int_t^T {  Instantaneous exposure  }
+
+# How to interpolate between GPS points? Will GPS points suffice as an approximation? 
+
+# Some tests of integrals and interpolation ----------------------------------------------------
+
+# Take a dog moving closer in a linear fashion in time and space to a scat and finding it immediately. The integral can be calculated simply.
+
+# Assume dog takes 200 seconds to arrive at a scat, moving at 0.5 m/s, traveling a total of 100 m. 
+# Assume that E_0 = 1, and sigma = sqrt(10)
+
+cumExp = 39.7305 # Integrate the function over the function for distance, which is 100 - 0.5(t), from t = 0 to T = 200.
+
+distcrude = data.frame(dist = seq(100, 0, by = -10))
+distfine = data.frame(dist = seq(100, 0, by = -1))
+distsuperfine = data.frame(dist = seq(100, 0 , by = -0.001))
+
+distcrude$time = seq(0,200, length.out = nrow(distcrude))
+distfine$time = seq(0,200, length.out = nrow(distfine))
+distsuperfine$time = seq(0,200, length.out = nrow(distsuperfine))
+
+distcrude$interval = diff(distcrude$time) %>% first
+distfine$interval = diff(distfine$time) %>% first
+distsuperfine$interval = diff(distsuperfine$time) %>% first
+
+instExp = function(dist, interval){
+  
+  out = exp(- dist / 20 )
+  
+  return(out * interval)
+  
+}
+
+# Crude integral does not work well!
+exp_crude = Map(f = instExp, dist = distcrude$dist, interval = distcrude$interval) %>% as.numeric %>% sum
+# One second seems to approximate closely
+Map(f = instExp, dist = distfine$dist, interval = distfine$interval) %>% as.numeric %>% sum
+# One tenth of a second is about equal to integral.
+Map(f = instExp, dist = distsuperfine$dist, interval = distsuperfine$interval) %>% as.numeric %>% sum
+
+# Try spline interpolation in time
+
+instExpEval_crude = Map(f = instExp, dist = distcrude$dist, interval = distcrude$interval) %>% as.numeric
+df = data.frame(time = distcrude$time, exposure = instExpEval_crude)
+
+plot(df)
+
+df_interp = spline(x = df$time, y = df$exposure, n = 100)
+
+plot(df_interp)
+
+(df_interp$y * (diff(df_interp$x) %>% first)) %>% sum
+
+# No this doesn't work. 
+
+# Try spline interpolation in distance & time
+
+distcrude_interp = spline(x = distcrude$time, y = distcrude$dist, n = 1000)
+
+exp_crude_interp = Map(f = instExp, dist = distcrude_interp$y, interval = diff(distcrude_interp$x) %>% first) %>% as.numeric %>% sum
+
+# This works, improves by a lot
+
+exp_crude - cumExp
+exp_crude_interp - cumExp
+
+# Method shall be to measure distance to scat at all GPS points. Spline interpolate those DISTANCE points along time recorded for GPS points. Then evaluate under Riemmann sum over a large number of interpolated points.
+
+# Try with an irregular movement 
+
+# Function for distance is now logarithmic, slowing down as dog gets closer
+
+# dist = exp(-x*92 / 20)
+
+time = seq(0,200, by = 0.001)
+dist = exp(-(time-92) / 20)
+
+df = data.frame(distance = dist, time = time)
+
+df$interval = c(diff(df$time), 0)
+
+exp_full = Map(f = instExp, dist = df$distance, interval = df$interval) %>% as.numeric %>% sum
+
+
+thinVec = function(vecLength, select_n, randSD = 1){
+  
+  index = seq(1, vecLength, length.out = select_n)
+  
+  rand = rnorm(n = select_n, mean = 0, sd = randSD)
+  
+  index = (index + rand) %>% round(digits = 0)
+  
+  index[index < 0] = 0
+  
+  index[index > vecLength] = vecLength
+  
+  index = sort(index)
+  
+  return(index)
+  
+}
+
+
+df_subset = df[thinVec(nrow(df), select_n = 5, randSD = 1000),] %>% select(distance, time)
+plot(df_subset$time, df_subset$distance)
+diff(df_subset$time) %>% summary
+
+df_subset$interval = c(diff(df_subset$time), 0)
+
+exp_subset = Map(f = instExp, dist = df_subset$distance, interval = df_subset$interval) %>% as.numeric %>% sum
+
+# Well approximated. Now interpolate. 
+
+df_subset_interp = spline(x = df_subset$time, y = df_subset$distance, n = 1000000) %>% as.data.frame %>% rename(time = x, dist = y)
+# df_subset_interp %>% plot
+df_subset_interp$interval = c(diff(df_subset_interp$time), 0)
+
+exp_subset_interp = Map(f = instExp, dist = df_subset_interp$dist, interval = df_subset_interp$interval) %>% as.numeric %>% sum
+
+# Compare - interpolation improves, usually down to error of around 0.01%
+
+exp_full - exp_subset
+exp_full - exp_subset_interp
+
+(exp_full - exp_subset_interp) / (exp_full)
+
+# Test with 12B2 ----------------------------------------------------------------------------------------
+
+track12B2 = tracks2016_points %>% data.frame %>% filter(Site == '12B2', Date == '2016-06-15')
+
+# How to extract tracks leading up to a scat collection?
+
+# Scats are referenced to the NEAREST point, due to severe mismatch in time recorded for dog track GPS time and scat collection time. It isn't misaligned by a specific amount, so aligning them is not possible. Since scats inherit the information of the nearest GPS point, we can just query the GPS points after the previous scat on that site on that date, or from the beginning if 
