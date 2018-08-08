@@ -14,8 +14,8 @@ model
 {
     # Priors
     p00 ~ dunif(0,1) # May need to make this informative if no information present
-    theta00 ~ dnorm(0,0.01) #prior for theta intercept
-    lambda0 ~ dnorm(0,0.01) #prior for lambda intercept
+    theta00 ~ dunif(-10,5) #prior for theta intercept
+    lambda0 ~ dunif(-10,5) #prior for lambda intercept
     
     
     for(i in 1:nSites){
@@ -82,7 +82,7 @@ model
             } 
         }
 
-        density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
+        #density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
 
     }
     
