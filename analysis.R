@@ -9,6 +9,7 @@ source('functions.R')
 
 load('data_cleaned.Rdata')
 load('metadata.Rdata')
+extract(data)
 
 # Note:
 
@@ -60,23 +61,38 @@ params = c("theta00", "p00", "lambda0")
 inits = function(){ 
   
   list(
-    N1 = rowSums(y)
+    N1 = rowSums(y),
+    theta00 = -6,
+    lambda0 = -4
   )
   
 }
 
-niter = 1e5
-nburn = niter/4
+niter = 1e4
+nburn = niter/10
+
+runDate = Sys.time() %>% format("%Y-%m-%d")
 
 a = Sys.time()
-jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', 
+               n.chains = 4, n.iter = niter, n.adapt = 10000,
+               n.burnin = nburn, parallel = T)
 b = Sys.time()
 
 b - a
 
-save(jagsOut, file = 'modelOutputs/out_null.Rdata')
+save(jagsOut, file = paste0('modelOutputs/out_null_', runDate, '.Rdata'))
 
 beepr::beep()
+
+system(command = 'python sendMail.py')
+
+# Optional update
+load('modelOutputs/out_null.Rdata')
+
+runDate = Sys.time() %>% format("%Y-%m-%d")
+jagsOut_update = jagsUI:::update.jagsUI(jagsOut, parameters.to.save = params, n.iter = 3e4)
+save(jagsOut_update, file = paste0('modelOutputs/out_null_update', runDate, '.Rdata'))
 
 system(command = 'python sendMail.py')
 
@@ -86,8 +102,8 @@ modCode = nimbleCode({
   
   # Priors
   p00 ~ dunif(0,1) # May need to make this informative if no information present
-  theta00 ~ dnorm(0,0.01) #prior for theta intercept
-  lambda0 ~ dnorm(0,0.01) #prior for lambda intercept
+  theta00 ~ dunif(-10, 5) #prior for theta intercept
+  lambda0 ~ dunif(-10, 5) #prior for lambda intercept
   
   
   for(i in 1:nSites){
