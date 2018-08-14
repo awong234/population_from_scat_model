@@ -96,6 +96,15 @@ save(jagsOut_update, file = paste0('modelOutputs/out_null_update', runDate, '.Rd
 
 system(command = 'python sendMail.py')
 
+# Another update
+
+runDate = Sys.time() %>% format("%Y-%m-%d")
+jagsOut_update = jagsUI:::update.jagsUI(jagsOut_update, parameters.to.save = params, n.iter = 3e4)
+save(jagsOut_update, file = paste0('modelOutputs/out_null_update', runDate, '.Rdata'))
+
+system(command = 'python sendMail.py')
+
+
 # Try nimble
 library(nimble)
 modCode = nimbleCode({
@@ -195,17 +204,37 @@ Cmodel = compileNimble(model)
 model_MCMC = buildMCMC(model)
 Cmodel_MCMC = compileNimble(model_MCMC, project = model)
 
-niter = 100000
+niter = 50000
 
 a = Sys.time()
-Cmodel_MCMC$run(niter, reset = F)
+samples = runMCMC(mcmc = Cmodel_MCMC, niter = niter, nburnin = niter/4, nchains = 3, inits = modInits)
 b = Sys.time()
 
 b - a
 
 system(command = 'python sendMail.py')
 
-modelSamples = as.matrix(Cmodel_MCMC$mvSamples)
-coda_modelSamples = coda::mcmc(modelSamples)
-coda::traceplot(coda_modelSamples)
+# Attempt mle and laplace approximation
 
+# Delta is the random effect. N is not, conditional on realized values of Delta; all other portions of the model are known. 
+
+# Integrate over possible values of Delta.
+
+model = function(p, y, Delta){
+  
+  maxV = dim(y)[3]
+  maxT = dim(y)[2]
+  nG = dim(y)[1]
+  
+  potentialDelta = seq(0,10)
+  
+  ll_N1 = dpois(x = Delta[,1], lambda = p$lam, log = T)
+  
+  for(t in 2:maxT){
+    ll_Nt = dpois(x = Delta[,t], lambda = p$theta, log = T)
+  }
+  
+  ll_obs = dbinom(x = y, size = N, prob = p$p, log = T)
+  
+  
+}
