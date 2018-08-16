@@ -1078,3 +1078,31 @@ make_days = function(diffDays, visitedGridInfo, maxT){
 select_groups <- function(data, groups, ...) 
   data[sort(unlist(attr(data, "indices")[ groups ])) + 1, ]
 
+# For extracting information from grid cells
+
+summarizeRastFromGrid = function(grids, raster, method = 'mean'){
+  
+  out = foreach(grid = 1:length(grids)) %do% {
+  # for(grid in 1:length(grids)){
+    # browser()
+    grid_temp = grids[[grid]]
+    
+    grid_temp_spdf = as(grid_temp, "SpatialPolygonsDataFrame")
+    
+    grid_temp_raster = raster::raster(grid_temp)
+    
+    smallRast = raster::projectRaster(raster, grid_temp_raster)
+    
+    if(method == 'mean'){
+      rasterSummary = raster::extract(x = smallRast, y = grid_temp_spdf, fun = mean, na.rm = T)
+    }
+    
+    rasterSummary_df = cbind(grid_temp@data, grid_temp %>% coordinates, rasterSummary)
+    
+    return(rasterSummary_df)
+    
+  }
+  
+ return(out) 
+  
+}
