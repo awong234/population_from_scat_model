@@ -440,3 +440,146 @@ metadata = list(visitedGridInfo = visitedGridInfo,
 save(data, file = 'data_cleaned.Rdata')
 save(metadata, file = 'metadata.Rdata')
 
+
+
+
+
+
+
+
+
+
+
+
+# Format covariates --------------------------------------------------------------
+
+# Need grids, track points. Load track points from above, get grids from saved metadata.
+
+skip = T
+
+load('data_cleaned.Rdata')
+load('metadata.Rdata')
+source('functions.R')
+
+extract(data)
+extract(metadata)
+
+# Need covariates each as a vector nSites long - one value per covariate.
+
+# Format Northing covariate ------------------------------------------------------------
+
+# Assign Northing value per grid cell. Easy.
+
+gridNorth = visitedGridInfo$y
+gridNorth_scaled = scale(gridNorth)
+
+gridEast = visitedGridInfo$x
+gridEast_scaled = scale(gridEast)
+
+# Format Habitat covariate ------------------------------------------------------------
+
+habs = raster::raster('spatCov/TNCHABS_masked_to_tracks.tif')
+
+# Assign habitat value per grid cell - will probably take the predominant feature.
+
+# One-hot the habitat covariate.
+
+# Format Elevation covariate ------------------------------------------------------------
+
+# Assign elevation value per grid cell - summarize by mean elevation within a
+# grid cell. Tests indicate that this is correctly performed because the
+# residuals when subtracting out the cell center values are very small.
+
+if(!'elevationBySite.Rdata' %in% dir()){
+  
+  elev = raster::raster('spatCov/elev_masked/Elev_masked_to_tracks_1.tif')
+  
+  elevData = summarizeRastFromGrid(grids = grids, raster = elev, method = 'mean')
+  
+  names(elevData) = names(grids)
+  
+  save(elevData, file = 'elevationBySite.Rdata')
+  
+} else {
+  load('elevationBySite.Rdata')
+}
+
+if(!skip){
+  
+  # See if it worked 
+  
+  test = elevData$`11A1`
+  
+  test = test[complete.cases(test),]
+  
+  # Looks good when comparing to arcmap
+  ggplot() + 
+    geom_raster(data = test, aes(x = x, y = y, fill = rasterSummary)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '11A1'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+
+}
+
+# Now need to grab elevation means and assign them in order 
+
+visitedGridInfo %>% head
+
+elevData$`01A1` %>% head
+
+elevData = elevData %>% do.call(what = rbind)
+
+elevCov = left_join(visitedGridInfo, elevData, by = c("gridID" = 'id')) %>% 
+  rename(Site = Site.x, x = x.x, y = y.x, elev = rasterSummary) %>% select(gridID, Site, x, y, y_row, elev)
+
+if(!skip){
+  
+  elev12B2 = elevCov %>% filter(Site == '12B2')
+  
+  # Looks good.
+  ggplot() + 
+    geom_raster(data = elev12B2, aes(x = x , y = y, fill = elev)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '12B2'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+# Scale
+
+scaledElev = scale(elevCov$elev)
+
+# Format road density covariate
+
+
+
+
+# Put all together ------------------------------------------------------------------------
+
+gridCovariates = data.frame(Intercept = 1, 
+                            Northing = gridNorth_scaled, 
+                            Easting = gridEast_scaled, 
+                            Elevation = scaledElev)
+
+# Format Detection covariates ------------------------------------------------------------
+
+visitData = read.csv('visitData.csv', stringsAsFactors = F)
+
+### Detection covariates need to be of the form X[g,t], with the same X[g,t] applied for all v.
+
+## Format Dog Covariate ------------------------------------------------------------
+
+visitData$Date_Time = as.Date(visitData$Date_Time, format = '%m/%d/%Y %H:%M')
+
+roundVisits %>% head
+
+
+
+
+## Format Handler Covariate ------------------------------------------------------------
+
+## Format length of track within grid cell. ------------------------------------------------------------
+
+# Matrix of dimension X[nSites, maxT, maxV], and each visit and replicate of every grid cell has a length of track.
+
+## Put it all together ------------------------------------------------------------
+
+detectCovariates = data.frame(Intercept = 1)
