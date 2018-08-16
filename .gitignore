@@ -8,3 +8,4 @@ trackLogs*/*
 gpx*/*
 *.html
 *.png
+spatCov/*
