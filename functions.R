@@ -1203,7 +1203,7 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
       registerDoParallel(cores = 4)
     }
     
-    foreach(r = 1:nrow(roundVisits)) %dopar% {
+    foreach(r = 1:nrow(roundVisits), .packages = 'dplyr', .export = c('siteVisitRank', 'diffDist')) %dopar% {
       
       # Get tracks for that site and date. 
       
