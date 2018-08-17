@@ -1106,3 +1106,157 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
  return(out) 
   
 }
+
+diffDist = function(pts){
+  sqrt(diff(pts[,1])^2 + diff(pts[,2])^2)
+}
+
+trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debug = F, parallel = F){
+  
+  Dcov = array(dim = c(nSites, maxT-1, maxV))
+  
+  tracks = data.frame(tracks)
+  
+  # Reference rleTracks by site and date. 
+  
+  if(debug){
+    
+    for(r in 1:2){ # Make parallel later
+      
+      # Get tracks for that site and date. 
+      
+      localTracks = tracks %>% filter(Site == roundVisits[r,]$Site, Date == roundVisits[r,]$Date)
+      
+      # What's the sample occasion (t)? For referencing column of covariate.
+      
+      # # # # # # # # # # # # # # # # # # # # # 
+      t = roundVisits[r,]$VisitRank
+      # # # # # # # # # # # # # # # # # # # # # 
+      
+      # How many grid cells visited this round at this site?
+      gridTrackCount = rleTracks[[r]]$lengths
+      nGrids = gridTrackCount %>% length
+      
+      # What order did we visit the grid cells, and what is their rank? For referencing third dimension of covariate array.
+      gridVisitOrder = data.frame(gridID = rleTracks[[r]]$values)
+      
+      orderVec = order(gridVisitOrder$gridID)
+      
+      gridVisitOrder$rank[orderVec] = siteVisitRank(sort(gridVisitOrder$gridID))
+      
+      gridVisitOrder = gridVisitOrder %>% left_join(visitedGridInfo, by = c('gridID' = 'gridID')) %>% select(gridID, rank, y_row)
+      
+      browser()
+      
+      
+      # Perform diffDist() on the n points of the track indicated by rleTracks.
+      
+      start = 0
+      end = 0
+      
+      for(i in 1:nGrids){
+        
+        nPoints = gridTrackCount[i]
+        
+        # # # # # # # # # # # # # # # # # # 
+        v = gridVisitOrder$rank[i]
+        g = gridVisitOrder$y_row[i]
+        # # # # # # # # # # # # # # # # # # 
+        
+        start = end + 1
+        end = end + nPoints
+        
+        if(debug){
+          gridIndex = match(roundVisits[1,]$Site, grids %>% names)
+          localGrid = grids[[gridIndex]] %>% data.frame
+          superlocal = localTracks[start:end,]
+          
+          buff = 100
+          print(
+          ggplot() + 
+            geom_tile(data = localGrid, aes(x = x , y = y), fill = NA, color = 'black') + 
+            geom_text(data = localGrid, aes(x = x, y = y, label = id)) +
+              # geom_point(data = superlocal, aes(x = Easting, y = Northing))
+            geom_point(data = superlocal, aes(x = Easting, y = Northing)) +
+            coord_cartesian(xlim = c(min(superlocal$Easting), max(superlocal$Easting)) + c(-buff,buff),
+                            ylim = c(min(superlocal$Northing), max(superlocal$Northing)) + c(-buff,buff))
+          )
+          print(diffDist(pts = superlocal %>% select(Easting,Northing)) %>% sum)
+          # browser()
+        }
+        
+        if(nPoints == 1){
+          Dcov[g,t,v] = 0
+        } else {
+          Dcov[g,t,v] = diffDist(pts = localTracks[start:end,] %>% select(Easting,Northing)) %>% sum
+        }
+        
+      }
+      
+    }
+    
+    return(Dcov)
+  
+  } else {
+    
+    if(parallel){
+      registerDoParallel(cores = 4)
+    }
+    
+    foreach(r = 1:nrow(roundVisits)) %dopar% {
+      
+      # Get tracks for that site and date. 
+      
+      localTracks = tracks %>% filter(Site == roundVisits[r,]$Site, Date == roundVisits[r,]$Date)
+      
+      # What's the sample occasion (t)? For referencing column of covariate.
+      
+      # # # # # # # # # # # # # # # # # # # # # 
+      t = roundVisits[r,]$VisitRank
+      # # # # # # # # # # # # # # # # # # # # # 
+      
+      # How many grid cells visited this round at this site?
+      gridTrackCount = rleTracks[[r]]$lengths
+      nGrids = gridTrackCount %>% length
+      
+      # What order did we visit the grid cells, and what is their rank? For referencing third dimension of covariate array.
+      gridVisitOrder = data.frame(gridID = rleTracks[[r]]$values)
+      
+      orderVec = order(gridVisitOrder$gridID)
+      
+      gridVisitOrder$rank[orderVec] = siteVisitRank(sort(gridVisitOrder$gridID))
+      
+      gridVisitOrder = gridVisitOrder %>% left_join(visitedGridInfo, by = c('gridID' = 'gridID')) %>% select(gridID, rank, y_row)
+      
+      # Perform diffDist() on the n points of the track indicated by rleTracks.
+      
+      start = 0
+      end = 0
+      
+      for(i in 1:nGrids){
+        
+        nPoints = gridTrackCount[i]
+        
+        # # # # # # # # # # # # # # # # # # 
+        v = gridVisitOrder$rank[i]
+        g = gridVisitOrder$y_row[i]
+        # # # # # # # # # # # # # # # # # # 
+        
+        start = end + 1
+        end = end + nPoints
+      
+        if(nPoints == 1){
+          Dcov[g,t,v] = 0
+        } else {
+          Dcov[g,t,v] = diffDist(pts = localTracks[start:end,] %>% select(Easting,Northing)) %>% sum
+        }
+        
+      }
+    }
+    
+    return(Dcov)
+    
+  }
+  
+}
+
