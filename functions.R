@@ -1111,9 +1111,9 @@ diffDist = function(pts){
   sqrt(diff(pts[,1])^2 + diff(pts[,2])^2)
 }
 
-trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debug = F, parallel = F){
+trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debug = F, plot = F){
   
-  Dcov = array(dim = c(nSites, maxT-1, maxV))
+  Dcov = array(data = 0, dim = c(nSites, maxT-1, maxV))
   
   tracks = data.frame(tracks)
   
@@ -1166,7 +1166,7 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
         start = end + 1
         end = end + nPoints
         
-        if(debug){
+        if(plot){
           gridIndex = match(roundVisits[1,]$Site, grids %>% names)
           localGrid = grids[[gridIndex]] %>% data.frame
           superlocal = localTracks[start:end,]
@@ -1199,11 +1199,7 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
   
   } else {
     
-    if(parallel){
-      registerDoParallel(cores = 4)
-    }
-    
-    foreach(r = 1:nrow(roundVisits), .packages = 'dplyr', .export = c('siteVisitRank', 'diffDist')) %dopar% {
+    for(r in 1:nrow(roundVisits)){
       
       # Get tracks for that site and date. 
       
@@ -1246,17 +1242,47 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
         end = end + nPoints
       
         if(nPoints == 1){
-          Dcov[g,t,v] = 0
+          Dcov[g,t,v] = 1
         } else {
           Dcov[g,t,v] = diffDist(pts = localTracks[start:end,] %>% select(Easting,Northing)) %>% sum
         }
         
+        if(Dcov[g,t,v] > 400){
+          
+          plot = T
+          message("Outlier at ", roundVisits[r,]$Site)
+          # browser()
+          
+          } else {
+            plot = F
+          }
+        
+        if(plot){
+          gridIndex = match(roundVisits[r,]$Site, grids %>% names)
+          localGrid = grids[[gridIndex]] %>% data.frame
+          superlocal = localTracks[start:end,]
+          scatsLocal = scats2016 %>% filter(Site == roundVisits[r,]$Site, Date == roundVisits[r,]$Date)
+          
+          buff = 100
+          print(
+            ggplot() + 
+            geom_tile(data = localGrid, aes(x = x , y = y), fill = NA, color = 'black') + 
+            geom_text(data = localGrid, aes(x = x, y = y, label = id)) +
+            # geom_point(data = superlocal, aes(x = Easting, y = Northing))
+            geom_point(data = superlocal, aes(x = Easting, y = Northing)) +
+            geom_point(data = scatsLocal, aes(x = Easting, y = Northing), color = 'red', shape = 4) + 
+            coord_cartesian(xlim = c(min(superlocal$Easting), max(superlocal$Easting)) + c(-buff,buff),
+                            ylim = c(min(superlocal$Northing), max(superlocal$Northing)) + c(-buff,buff))
+          )
+          print(diffDist(pts = superlocal %>% select(Easting,Northing)) %>% sum)
+          browser()
+        }
+        
       }
+      
     }
     
-    return(Dcov)
-    
   }
-  
+  return(Dcov)
 }
 

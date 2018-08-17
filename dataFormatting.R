@@ -637,21 +637,20 @@ if(!skip){
 ## Format length of track within grid cell. ------------------------------------------------------------
 
 # Distance values for every grid cell, sample occasion, and replicate.
-# Without parallel takes 200 s
+# Without parallel takes 200 s; with parallel takes 96s
 system.time({
 Dcov = trackDistPerRep(tracks = tracks2016_points, 
                 rleTracks = rleTracks, 
                 visitedGridInfo = visitedGridInfo, 
                 roundVisits = roundVisits,
-                debug = F, 
-                parallel = T)
+                debug = F)
 }
 )
 
 registerDoSEQ()
 # Test: There should be positive length wherever vis == 1.
 
-all(Dcov > 0 == vis > 0)
+all((Dcov > 0) == (vis[,2:5,] > 0))
 
 # Use rleTracks from above, and reference grid cell. Loop through tracks to get the relevant points. 
 # Will need to do some finagling to get replicate v.
