@@ -565,16 +565,74 @@ visitData = read.csv('visitData.csv', stringsAsFactors = F)
 
 ### Detection covariates need to be of the form X[g,t], with the same X[g,t] applied for all v.
 
-## Format Dog Covariate ------------------------------------------------------------
+## Format Dog and Handler Covariate ------------------------------------------------------------
 
-visitData$Date_Time = as.Date(visitData$Date_Time, format = '%m/%d/%Y %H:%M')
+visitData$Date_Time = as.POSIXct(visitData$Date_Time, format = '%m/%d/%Y %H:%M')
+
+visitData = visitData %>% mutate(Date = as.Date(Date_Time))
+
+visitDataRedu = visitData %>% select(Date, Transect_ID, Handler, Dog) %>% mutate(Date = as.character(Date))
 
 roundVisits %>% head
+visitDataRedu %>% head
 
+visitCovariates = roundVisits %>% left_join(visitDataRedu, by = c("Site" = "Transect_ID", "Date" = "Date"))
 
+dogNames = visitCovariates$Dog %>% unique
+nDogs = dogNames %>% length
 
+humNames = visitCovariates$Handler %>% unique
+nHandler = humNames %>% length
 
-## Format Handler Covariate ------------------------------------------------------------
+dogCov = array(data = 0, dim = c(nSites, maxT-1, nDogs), dimnames = list(NULL, NULL, dogNames))
+humCov = array(data = 0, dim = c(nSites, maxT-1, nHandler), dimnames = list(NULL, NULL, humNames))
+
+for(i in 1:maxT-1){
+  
+  temp = visitCovariates %>% filter(VisitRank == i)
+  
+  temp = visitedGridInfo %>% left_join(temp, by = c("Site" = "Site"))
+  
+  for(dog in 1:nDogs){
+    dogName = dogNames[dog]
+    dogCov[,i,dog] = as.integer(temp$Dog == dogName)
+  }
+  
+  for(hum in 1:nHandler){
+    humName = humNames[hum]
+    humCov[,i,hum] = as.integer(temp$Handler == humName)
+  }
+  
+}
+
+dogCov[is.na(dogCov)] = 0
+humCov[is.na(humCov)] = 0
+
+rm(temp)
+
+# Correct? Yes all correct
+
+if(!skip){
+  
+  out = matrix(F, nrow = maxT - 1, ncol = nDogs)
+  
+  for(t in 1:maxT-1){
+    for(dog in 1:nDogs){
+      
+      dogIndex = dogCov[,t,dogNames[dog]] %>% as.logical() # Skye's visits in first visit
+      
+      covSites = visitedGridInfo[dogIndex,] %>% pull(Site) %>% unique
+      
+      truthSites = visitCovariates %>% filter(Dog == dogNames[dog], VisitRank == t) %>% pull(Site)
+      
+      out[t,dog] = all(truthSites %in% covSites) & all(covSites %in% truthSites)
+      
+    }
+  }
+  
+  out   # exactly equal
+  
+}
 
 ## Format length of track within grid cell. ------------------------------------------------------------
 
@@ -582,4 +640,10 @@ roundVisits %>% head
 
 ## Put it all together ------------------------------------------------------------
 
-detectCovariates = data.frame(Intercept = 1)
+detectCovar = list(
+  intercept = matrix(1, nrow = nSites, ncol = maxT-1),
+  dogCov = dogCov,
+  humCov = humCov
+)
+
+save(detectCovar, file = 'detectCovar.Rdata')s
