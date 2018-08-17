@@ -636,14 +636,112 @@ if(!skip){
 
 ## Format length of track within grid cell. ------------------------------------------------------------
 
-# Matrix of dimension X[nSites, maxT, maxV], and each visit and replicate of every grid cell has a length of track.
+# Distance values for every grid cell, sample occasion, and replicate.
+# Without parallel takes 200 s
+system.time({
+Dcov = trackDistPerRep(tracks = tracks2016_points, 
+                rleTracks = rleTracks, 
+                visitedGridInfo = visitedGridInfo, 
+                roundVisits = roundVisits,
+                debug = F, 
+                parallel = T)
+}
+)
+
+registerDoSEQ()
+# Test: There should be positive length wherever vis == 1.
+
+all(Dcov > 0 == vis > 0)
+
+# Use rleTracks from above, and reference grid cell. Loop through tracks to get the relevant points. 
+# Will need to do some finagling to get replicate v.
+
+# rleTracks is in order of roundVisits. Use visitRank to obtain column index. 
+
+nrow(roundVisits) == length(rleTracks)
+
+# Old tests
+
+if(!skip){
+  
+  testRle = rleTracks[[1]]
+  
+  testTracks = tracks2016_points %>% data.frame %>% filter(Site == '11A1', Round == 'Clearing') %>% mutate(Order = 1:nrow(testTracks))
+  
+  gridVisitOrder = data.frame(gridID = testRle$values)
+  
+  gridVisitOrder$rank[orderVec] = siteVisitRank(testRle$values[orderVec])
+  
+  testfn = function(){
+    
+    dist = NULL
+    
+    start = 0
+    end = 0
+    
+    
+    for(i in seq(testRle$lengths %>% length)){
+      
+      nPoints = testRle$lengths[i]
+      
+      start = end + 1
+      end = end + nPoints
+      
+      if(nPoints == 1){
+        dist = c(dist, 0)
+      } else {
+        
+        dist = c(dist,diffDist(pts = testTracks[start:end,] %>% select(Easting,Northing)) %>% sum)
+        
+      }
+      
+    }
+    
+    return(dist)
+  }
+  
+  # Test with indexed vector
+  
+  testfn_index = function(){
+    dist = vector(mode = 'numeric', length = testRle$lengths %>% length)
+    
+    start = 0 
+    end = 0
+    
+    for(i in seq(testRle$lengths %>% length)){
+      
+      nPoints = testRle$lengths[i]
+      
+      start = end + 1
+      end = end + nPoints
+      
+      if(nPoints == 1){
+        dist[i] = 0
+      } else {
+        
+        dist[i] = diffDist(pts = testTracks[start:end,] %>% select(Easting,Northing)) %>% sum
+        
+      }
+      
+    }
+    
+    return(dist)
+    
+    
+  }
+  
+  microbenchmark::microbenchmark("Not Indexed" = testfn(), "Indexed" = testfn_index(), times = 50)
+  
+}
+
 
 ## Put it all together ------------------------------------------------------------
 
 detectCovar = list(
   intercept = matrix(1, nrow = nSites, ncol = maxT-1),
   dogCov = dogCov,
-  humCov = humCov
+  humCov = humCov,
+  Dcov = Dcov
 )
 
-save(detectCovar, file = 'detectCovar.Rdata')s
+save(detectCovar, file = 'detectCovar.Rdata')
