@@ -1091,11 +1091,21 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
     
     grid_temp_raster = raster::raster(grid_temp)
     
-    smallRast = raster::projectRaster(raster, grid_temp_raster)
-    
     if(method == 'mean'){
+      smallRast = raster::projectRaster(raster, grid_temp_raster)
       rasterSummary = raster::extract(x = smallRast, y = grid_temp_spdf, fun = mean, na.rm = T)
     }
+    if(method == 'mode'){
+      
+      Mode <- function(x) {
+        ux <- unique(x)
+        return(ux[which.max(tabulate(match(x, ux)))])
+      }
+      
+      smallRast = raster::projectRaster(raster, grid_temp_raster, method = 'ngb')
+      rasterSummary = raster::getValues(smallRast)
+      
+    } 
     
     rasterSummary_df = cbind(grid_temp@data, grid_temp %>% coordinates, rasterSummary)
     
