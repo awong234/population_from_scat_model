@@ -466,23 +466,15 @@ extract(metadata)
 
 # Need covariates each as a vector nSites long - one value per covariate.
 
-# Format Northing covariate ------------------------------------------------------------
+# Format Coordinate covariate ------------------------------------------------------------
 
-# Assign Northing value per grid cell. Easy.
+# Assign Coordinate value per grid cell. Easy.
 
 gridNorth = visitedGridInfo$y
 gridNorth_scaled = scale(gridNorth)
 
 gridEast = visitedGridInfo$x
 gridEast_scaled = scale(gridEast)
-
-# Format Habitat covariate ------------------------------------------------------------
-
-habs = raster::raster('spatCov/TNCHABS_masked_to_tracks.tif')
-
-# Assign habitat value per grid cell - will probably take the predominant feature.
-
-# One-hot the habitat covariate.
 
 # Format Elevation covariate ------------------------------------------------------------
 
@@ -547,9 +539,186 @@ if(!skip){
 
 scaledElev = scale(elevCov$elev)
 
-# Format road density covariate
+# Format Habitat covariate ------------------------------------------------------------
+
+# Follows same general procedure as elev formatting
+
+if(!'habitatBySite.Rdata' %in% dir()){
+  
+  habs = raster::raster('spatCov/tnc_habs_masked.tif/tnc_habs_masked.tif')
+  
+  # Assign habitat value per grid cell - will probably take the predominant feature.
+  
+  habData = summarizeRastFromGrid(grids = grids, raster = habs, method = 'mode')
+  
+  names(habData) = names(grids)
+  
+  save(habData, file = 'habitatBySite.Rdata')
+  
+  
+} else {
+  
+  load('habitatBySite.Rdata')
+  
+}
+
+if(!skip){
+  
+  # See if it worked 
+  
+  test = habData$`12B2`
+  
+  test = test[complete.cases(test),]
+  
+  # Looks good when comparing to arcmap
+  ggplot() + 
+    geom_raster(data = test, aes(x = x, y = y, fill = rasterSummary %>% factor())) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '12B2'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+# Put it all together
+
+# One-hot the habitat covariate.
+
+habData = do.call(what = rbind, args = habData)
+
+habCov = left_join(visitedGridInfo, habData, by = c("gridID" = 'id')) %>% 
+  rename(Site = Site.x, x = x.x, y = y.x, hab = rasterSummary) %>% select(gridID, Site, x, y, y_row, hab)
+
+habRef = data.frame("Name" = c("Other", "Conifer", "Deciduous", "Mixed", "Wetland"),
+                    "Value" = c(0,1,2,3,4))
+
+nHab = habRef %>% nrow
+
+habCov_mat = matrix(data = 0, nrow = nSites, ncol = nHab, dimnames = list(NULL, habRef$Name))
+
+for(i in 1:nHab){
+  
+  habCov_mat[,i] = habCov$hab == habRef$Value[i]
+  
+}
 
 
+
+# Format major road density covariate ----------------------------------------------------------------------
+
+# Same process as elevation
+
+if(!'highwayDensityBySite.Rdata' %in% dir()){
+  
+  highwayRast = raster::raster('spatCov/highways_masked_to_tracks/highways_masked_to_tracks.tif')
+  
+  highwayData = summarizeRastFromGrid(grids = grids, raster = highwayRast, method = 'mean')
+  
+  names(highwayData) = names(grids)
+  
+  save(highwayData, file = 'highwayDensityBySite.Rdata')
+  
+} else {
+  
+  load("highwayDensityBySite.Rdata")
+  
+}
+
+if(!skip){
+  
+  # See if it worked 
+  
+  test = highwayData$`11A1`
+  
+  test = test[complete.cases(test),]
+  
+  # Looks good when comparing to arcmap
+  ggplot() + 
+    geom_raster(data = test, aes(x = x, y = y, fill = rasterSummary)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '11A1'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+highwayData = highwayData %>% do.call(what = rbind)
+
+highwayCov = left_join(visitedGridInfo, highwayData, by = c("gridID" = 'id')) %>% 
+  rename(Site = Site.x, x = x.x, y = y.x, density = rasterSummary) %>% select(gridID, Site, x, y, y_row, density)
+
+if(!skip){
+  
+  high12B2 = highwayCov %>% filter(Site == '12B2')
+  
+  # Looks good.
+  ggplot() + 
+    geom_raster(data = high12B2, aes(x = x , y = y, fill = density)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '12B2'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+# Scale
+
+scaledHighway = scale(highwayCov$density)
+
+
+
+# Format minor road density covariate ----------------------------------------------------------------------
+
+# Same process as elevation
+
+if(!'minRoadDensityBySite.Rdata' %in% dir()){
+  
+  minRoadRast = raster::raster('spatCov/localRoads_masked_to_tracks/localRoads_masked_to_tracks.tif')
+  
+  minRoadData = summarizeRastFromGrid(grids = grids, raster = minRoadRast, method = 'mean')
+  
+  names(minRoadData) = names(grids)
+  
+  save(minRoadData, file = 'minRoadDensityBySite.Rdata')
+  
+} else {
+  
+  load("minRoadDensityBySite.Rdata")
+  
+}
+
+if(!skip){
+  
+  # See if it worked 
+  
+  test = minRoadData$`11A1`
+  
+  test = test[complete.cases(test),]
+  
+  # Looks good when comparing to arcmap
+  ggplot() + 
+    geom_raster(data = test, aes(x = x, y = y, fill = rasterSummary)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '11A1'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+minRoadData = minRoadData %>% do.call(what = rbind)
+
+minRoadCov = left_join(visitedGridInfo, minRoadData, by = c("gridID" = 'id')) %>% 
+  rename(Site = Site.x, x = x.x, y = y.x, density = rasterSummary) %>% select(gridID, Site, x, y, y_row, density)
+
+if(!skip){
+  
+  minRoad12B2 = minRoadCov %>% filter(Site == '12B2')
+  
+  # Looks good.
+  ggplot() + 
+    geom_raster(data = minRoad12B2, aes(x = x , y = y, fill = density)) + 
+    geom_point(data = tracks2016_points %>% data.frame %>% filter(Site == '12B2'), aes(x = Easting, y = Northing)) + 
+    coord_equal()
+  
+}
+
+# Scale
+
+scaledMinRoad = scale(minRoadCov$density)
+
+# Same process as elevation
 
 
 # Put all together ------------------------------------------------------------------------
@@ -557,7 +726,12 @@ scaledElev = scale(elevCov$elev)
 gridCovariates = data.frame(Intercept = 1, 
                             Northing = gridNorth_scaled, 
                             Easting = gridEast_scaled, 
-                            Elevation = scaledElev)
+                            Elevation = scaledElev,
+                            scaledHighway,
+                            scaledMinRoad,
+                            habCov_mat[,2:5])
+
+save(gridCovariates, file = 'gridCovariates.Rdata')
 
 # Format Detection covariates ------------------------------------------------------------
 
