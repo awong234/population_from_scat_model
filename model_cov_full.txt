@@ -8,33 +8,39 @@ model
     lambda0 ~ dunif(-10,5) #prior for lambda intercept
 
     # Priors for landscape fixed effects
-    beta_lam_hab            ~ dnorm(0,0.01) # prior for habitat effect
-    beta_lam_elev           ~ dnorm(0,0.01) # prior for elevation effect
-    beta_lam_highway        ~ dnorm(0,0.01) # prior for highway effect
-    beta_lam_minor_road     ~ dnorm(0,0.01) # prior for an index of human effect, local road density
-    beta_lam_northing       ~ dnorm(0,0.01) # prior for northing effect
-    beta_lam_easting        ~ dnorm(0,0.01) # prior for easting effect
+    beta_lam_hab_softwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_lam_hab_hardwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_lam_hab_wetland        ~ dnorm(0,0.01) # prior for habitat effect
+    beta_lam_hab_mixed          ~ dnorm(0,0.01) # prior for habitat effect
+    beta_lam_elev               ~ dnorm(0,0.01) # prior for elevation effect
+    beta_lam_highway            ~ dnorm(0,0.01) # prior for highway effect
+    beta_lam_minor_road         ~ dnorm(0,0.01) # prior for an index of human effect, local road density
+    beta_lam_northing           ~ dnorm(0,0.01) # prior for northing effect
+    beta_lam_easting            ~ dnorm(0,0.01) # prior for easting effect
     
-    beta_theta_hab          ~ dnorm(0,0.01) # prior for habitat effect
-    beta_theta_elev         ~ dnorm(0,0.01) # prior for elevation effect
-    beta_theta_highway      ~ dnorm(0,0.01) # prior for highway effect
-    beta_theta_minor_road   ~ dnorm(0,0.01) # prior for an index of human effect, local road density
-    beta_theta_northing     ~ dnorm(0,0.01) # prior for northing effect
-    beta_theta_easting      ~ dnorm(0,0.01) # prior for easting effect
+    beta_theta_hab_softwood     ~ dnorm(0,0.01) # prior for habitat effect
+    beta_theta_hab_hardwood     ~ dnorm(0,0.01) # prior for habitat effect
+    beta_theta_hab_wetland      ~ dnorm(0,0.01) # prior for habitat effect
+    beta_theta_hab_mixed        ~ dnorm(0,0.01) # prior for habitat effect
+    beta_theta_elev             ~ dnorm(0,0.01) # prior for elevation effect
+    beta_theta_highway          ~ dnorm(0,0.01) # prior for highway effect
+    beta_theta_minor_road       ~ dnorm(0,0.01) # prior for an index of human effect, local road density
+    beta_theta_northing         ~ dnorm(0,0.01) # prior for northing effect
+    beta_theta_easting          ~ dnorm(0,0.01) # prior for easting effect
 
     # Priors for detection fixed effects
 
-    beta_detect_skye               ~ dnorm(0,0.01) # prior for dog effect
-    beta_detect_scooby             ~ dnorm(0,0.01) # prior for dog effect
-    beta_detect_ranger             ~ dnorm(0,0.01) # prior for dog effect
-    beta_detect_max                ~ dnorm(0,0.01) # prior for dog effect
-    beta_detect_hiccup             ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_skye            ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_scooby          ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_ranger          ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_max             ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_hiccup          ~ dnorm(0,0.01) # prior for dog effect
 
-    beta_detect_suzie              ~ dnorm(0,0.01) # prior for suzie effect
-    beta_detect_jennifer           ~ dnorm(0,0.01) # prior for suzie effect
-    beta_detect_justin             ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_suzie           ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_jennifer        ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_justin          ~ dnorm(0,0.01) # prior for suzie effect
 
-    beta_detect_dist               ~ dnorm(0,0.01) # prior for distance effect
+    beta_detect_dist            ~ dnorm(0,0.01) # prior for distance effect
     
     for(i in 1:nSites){
 
@@ -49,12 +55,16 @@ model
         # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
 
         # Linear model for lambda.  Include fixed/random effects here later
-        lambda[i] = exp(lambda0             *   gridCovariates[i,1] + 
-                        beta_lam_northing   *   gridCovariates[i,2] + 
-                        beta_lam_easting    *   gridCovariates[i,3] + 
-                        beta_lam_elev       *   gridCovariates[i,4] + 
-                        beta_lam_highway    *   gridCovariates[i,5] + 
-                        beta_lam_minor_road *   gridCovariates[i,6]
+        lambda[i] = exp(lambda0                 *   gridCovariates[i,1]  + 
+                        beta_lam_northing       *   gridCovariates[i,2]  + 
+                        beta_lam_easting        *   gridCovariates[i,3]  + 
+                        beta_lam_elev           *   gridCovariates[i,4]  + 
+                        beta_lam_highway        *   gridCovariates[i,5]  + 
+                        beta_lam_minor_road     *   gridCovariates[i,6]  + 
+                        beta_lam_hab_hardwood   *   gridCovariates[i,7]  + 
+                        beta_lam_hab_mixed      *   gridCovariates[i,8]  + 
+                        beta_lam_hab_softwood   *   gridCovariates[i,9]  + 
+                        beta_lam_hab_wetland    *   gridCovariates[i,10]
                         ) # somewhat immaterial except for mechanistic model of deposition process and observation.
         
         # Initial deposition of scats. There are no collections, and assumed to be no degradation until we visit, so N[i,1,v] is equal over all v.
@@ -72,13 +82,17 @@ model
             
         }
         # Linear model for theta. Include fixed/random effects here later
-        theta[i] = exp(theta00              *   gridCovariates[i,1] + 
-                        beta_theta_northing *   gridCovariates[i,2] + 
-                        beta_theta_easting  *   gridCovariates[i,3] + 
-                        beta_theta_elev     *   gridCovariates[i,4] + 
-                        beta_lam_elev       *   gridCovariates[i,4] + 
-                        beta_lam_highway    *   gridCovariates[i,5] + 
-                        beta_lam_minor_road *   gridCovariates[i,6])
+        theta[i] = exp(theta00                  *   gridCovariates[i,1]  + 
+                       beta_theta_northing      *   gridCovariates[i,2]  + 
+                       beta_theta_easting       *   gridCovariates[i,3]  + 
+                       beta_theta_elev          *   gridCovariates[i,4]  + 
+                       beta_theta_elev          *   gridCovariates[i,4]  + 
+                       beta_theta_highway       *   gridCovariates[i,5]  + 
+                       beta_theta_minor_road    *   gridCovariates[i,6]) +
+                       beta_theta_hab_hardwood  *   gridCovariates[i,7]  + 
+                       beta_theta_hab_mixed     *   gridCovariates[i,8]  + 
+                       beta_theta_hab_softwood  *   gridCovariates[i,9]  + 
+                       beta_theta_hab_wetland   *   gridCovariates[i,10]
         
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.        
