@@ -47,7 +47,7 @@ defecationRates$sd[miquelleRows] = with(defecationRates, expr = {se * sqrt(N)})[
 
 data$per_moose_deposition = mean(defecationRates$mean)
 
-# JAGS part
+# JAGS run NULL ---------------------------------------------------------------------------------------------------------
 
 params = c("theta00", "p00", "lambda0")
 
@@ -105,7 +105,7 @@ save(jagsOut_update, file = paste0('modelOutputs/out_null_update', runDate, '.Rd
 system(command = 'python sendMail.py')
 
 
-# Try nimble
+# nimble run NULL ----------------------------------------------------------------------------------------------------------------------------------------------
 library(nimble)
 modCode = nimbleCode({
   
@@ -204,7 +204,7 @@ Cmodel = compileNimble(model)
 model_MCMC = buildMCMC(model)
 Cmodel_MCMC = compileNimble(model_MCMC, project = model)
 
-niter = 50000
+niter = 100000
 
 a = Sys.time()
 samples = runMCMC(mcmc = Cmodel_MCMC, niter = niter, nburnin = niter/4, nchains = 3, inits = modInits)
@@ -212,29 +212,84 @@ b = Sys.time()
 
 b - a
 
+save(samples, file = paste0('modelOutputs/out_null_nimble_', format(b, format = '%Y-%m-%d'),'.Rdata'))
+
 system(command = 'python sendMail.py')
 
-# Attempt mle and laplace approximation
+# Covariate analyses
 
-# Delta is the random effect. N is not, conditional on realized values of Delta; all other portions of the model are known. 
+# JAGS Full model ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Integrate over possible values of Delta.
+# Want to create a function of JAGS runs that operates similarly to autojags, but that saves intermediate output. I don't want interruptions cancelling work.
 
-model = function(p, y, Delta){
+load('detectCovar.Rdata')
+load('gridCovariates.Rdata')
+
+extract(detectCovar)
+
+# Add covariates to data
+
+data$gridCovariates = gridCovariates
+data$Dcov = Dcov
+data$dogCov = dogCov
+data$humCov = humCov
+
+
+params = c("theta00", "p00", "lambda0", 
+           # Lambda covars
+           'beta_lam_hab_softwood', 'beta_lam_hab_softwood', 'beta_lam_hab_hardwood', 'beta_lam_hab_wetland', 
+           'beta_lam_hab_mixed', 'beta_lam_elev', 'beta_lam_highway', 'beta_lam_minor_road', 'beta_lam_northing', 'beta_lam_easting',
+           # Theta covars
+           'beta_theta_hab_softwood', 'beta_theta_hab_hardwood', 'beta_theta_hab_wetland', 'beta_theta_hab_mixed', 'beta_theta_elev',
+           'beta_theta_highway', 'beta_theta_minor_road', 'beta_theta_northing', 'beta_theta_easting',
+           # Detect covars - dog
+           'beta_detect_skye', 'beta_detect_scooby', 'beta_detect_ranger', 'beta_detect_max', 'beta_detect_hiccup', 
+           # Detect covars - handler
+           'beta_detect_suzie', 'beta_detect_jennifer', 'beta_detect_justin',
+           # Detect covars - dist track in grid cell
+           'beta_detect_dist'
+           )
+
+inits = function(){ 
   
-  maxV = dim(y)[3]
-  maxT = dim(y)[2]
-  nG = dim(y)[1]
-  
-  potentialDelta = seq(0,10)
-  
-  ll_N1 = dpois(x = Delta[,1], lambda = p$lam, log = T)
-  
-  for(t in 2:maxT){
-    ll_Nt = dpois(x = Delta[,t], lambda = p$theta, log = T)
-  }
-  
-  ll_obs = dbinom(x = y, size = N, prob = p$p, log = T)
-  
+  list(
+    N1 = rowSums(y),
+    theta00 = rnorm(n = 1, mean = -6, sd = 2),
+    lambda0 = rnorm(n = 1, mean = -4, sd = 2)
+  )
   
 }
+
+
+
+niter = 1000
+nburn = 1000
+# For grouping duplicate runs
+runDate = Sys.time() %>% format("%Y-%m-%d")
+# Run with long adapt, short burn, short n.iter, and update later.
+jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_full.txt', 
+               n.chains = 2, n.iter = niter, n.adapt = 1000,
+               n.burnin = nburn, parallel = F)
+
+save(jagsOut, file = paste0('modelOutputs/fullModel/out_full_', runDate, '_1.Rdata'))
+
+beepr::beep()
+
+system(command = 'python sendMail.py')
+
+# Update in a loop - total 3e5 additional iterations
+
+updateIter = 1000
+
+for(i in 2:10){
+  
+  jagsOut = jagsUI:::update.jagsUI(jagsOut, parameters.to.save = params, n.iter = updateIter)
+  save(jagsOut, file = paste0('modelOutputs/out_full_', runDate, '_1.Rdata'))
+  jagsOut %>% summary
+  system(command = 'python sendMail.py')
+  
+}
+
+# need a function to put together.
+
+out = combineMCMC(dateGroup = '2018-08-09')
