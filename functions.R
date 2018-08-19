@@ -1296,3 +1296,25 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
   return(Dcov)
 }
 
+# Jags functions
+
+combineMCMC = function(folder, dateGroup){
+  
+  files = list.files(path = folder, pattern = dateGroup, full.names = T)
+  out = list()
+  simsList = NULL
+  
+  for(f in files){
+    
+    load(f)
+    
+    simsList = rbind.data.frame(simsList, data.frame(jagsOut$sims.list))
+    # browser()
+  }
+  
+  out$simsList = simsList
+  
+  return(out)
+  
+}
+
