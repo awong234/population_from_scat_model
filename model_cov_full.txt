@@ -3,7 +3,8 @@
 model
 {
     # Priors
-    p00 ~ dunif(0,1) # May need to make this informative if no information present
+    p00 ~ dunif(0,1) 
+    pInt = log(p00/(1-p00)) # Intercept for p on logit scale
     theta00 ~ dunif(-10,5) #prior for theta intercept
     lambda0 ~ dunif(-10,5) #prior for lambda intercept
 
@@ -115,7 +116,7 @@ model
             for(v in 1:maxV){
 
                 # Covariates on detection
-                logit(p0[i,t,v]) = p00 + 
+                logit(p0[i,t,v]) = pInt + 
                                    Dcov[i,t-1,v]*beta_detect_dist + 
                                    dogCov[i,t-1,1]*beta_detect_skye +
                                    dogCov[i,t-1,2]*beta_detect_scooby +
