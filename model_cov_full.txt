@@ -61,9 +61,9 @@ model
                         beta_lam_elev           *   gridCovariates[i,4]  + 
                         beta_lam_highway        *   gridCovariates[i,5]  + 
                         beta_lam_minor_road     *   gridCovariates[i,6]  + 
-                        beta_lam_hab_hardwood   *   gridCovariates[i,7]  + 
-                        beta_lam_hab_mixed      *   gridCovariates[i,8]  + 
-                        beta_lam_hab_softwood   *   gridCovariates[i,9]  + 
+                        beta_lam_hab_softwood   *   gridCovariates[i,7]  + 
+                        beta_lam_hab_hardwood   *   gridCovariates[i,8]  + 
+                        beta_lam_hab_mixed      *   gridCovariates[i,9]  + 
                         beta_lam_hab_wetland    *   gridCovariates[i,10]
                         ) # somewhat immaterial except for mechanistic model of deposition process and observation.
         
@@ -89,9 +89,9 @@ model
                        beta_theta_elev          *   gridCovariates[i,4]  + 
                        beta_theta_highway       *   gridCovariates[i,5]  + 
                        beta_theta_minor_road    *   gridCovariates[i,6]) +
-                       beta_theta_hab_hardwood  *   gridCovariates[i,7]  + 
-                       beta_theta_hab_mixed     *   gridCovariates[i,8]  + 
-                       beta_theta_hab_softwood  *   gridCovariates[i,9]  + 
+                       beta_theta_hab_softwood  *   gridCovariates[i,7]  + 
+                       beta_theta_hab_hardwood  *   gridCovariates[i,8]  + 
+                       beta_theta_hab_mixed     *   gridCovariates[i,9]  + 
                        beta_theta_hab_wetland   *   gridCovariates[i,10]
         
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
