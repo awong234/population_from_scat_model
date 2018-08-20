@@ -5,8 +5,8 @@ model
     # Priors
     p00 ~ dunif(0,1) 
     pInt = log(p00/(1-p00)) # Intercept for p on logit scale
-    theta00 ~ dunif(-10,5) #prior for theta intercept
-    lambda0 ~ dunif(-10,5) #prior for lambda intercept
+    theta00 ~ dunif(-20,5) #prior for theta intercept
+    lambda0 ~ dunif(-20,5) #prior for lambda intercept
 
     # Priors for landscape fixed effects
     beta_lam_hab_softwood       ~ dnorm(0,0.01) # prior for habitat effect
@@ -86,15 +86,14 @@ model
         theta[i] = exp(theta00                  *   gridCovariates[i,1]  + 
                        beta_theta_northing      *   gridCovariates[i,2]  + 
                        beta_theta_easting       *   gridCovariates[i,3]  + 
-                       beta_theta_elev          *   gridCovariates[i,4]  + 
-                       beta_theta_elev          *   gridCovariates[i,4]  + 
+                       beta_theta_elev          *   gridCovariates[i,4]  +                        
                        beta_theta_highway       *   gridCovariates[i,5]  + 
-                       beta_theta_minor_road    *   gridCovariates[i,6]) +
+                       beta_theta_minor_road    *   gridCovariates[i,6]  +
                        beta_theta_hab_softwood  *   gridCovariates[i,7]  + 
                        beta_theta_hab_hardwood  *   gridCovariates[i,8]  + 
                        beta_theta_hab_mixed     *   gridCovariates[i,9]  + 
                        beta_theta_hab_wetland   *   gridCovariates[i,10]
-        
+        )
         # Proceeding N's add new recruits and remove current counts from the previous time step's N.
         # Recruits are random poisson variates with mean theta.        
 
