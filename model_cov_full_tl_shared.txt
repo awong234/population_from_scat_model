@@ -1,0 +1,134 @@
+# Full covariate model, changed to share covariate coefficients between theta and lambda
+
+model
+{
+    # Priors
+    p00 ~ dunif(0,1) 
+    pInt = log(p00/(1-p00)) # Intercept for p on logit scale
+    theta00 ~ dunif(-20,5) #prior for theta intercept
+    lambda0 ~ dunif(-20,5) #prior for lambda intercept
+
+    # Priors for landscape fixed effects
+    beta_hab_softwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_hab_hardwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_hab_wetland        ~ dnorm(0,0.01) # prior for habitat effect
+    beta_hab_mixed          ~ dnorm(0,0.01) # prior for habitat effect
+    beta_elev               ~ dnorm(0,0.01) # prior for elevation effect
+    beta_highway            ~ dnorm(0,0.01) # prior for highway effect
+    beta_minor_road         ~ dnorm(0,0.01) # prior for an index of human effect, local road density
+    beta_northing           ~ dnorm(0,0.01) # prior for northing effect
+    beta_easting            ~ dnorm(0,0.01) # prior for easting effect
+    
+    # Priors for detection fixed effects
+
+    beta_detect_skye            ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_scooby          ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_ranger          ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_max             ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_hiccup          ~ dnorm(0,0.01) # prior for dog effect
+
+    beta_detect_suzie           ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_jennifer        ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_justin          ~ dnorm(0,0.01) # prior for suzie effect
+
+    beta_detect_dist            ~ dnorm(0,0.01) # prior for distance effect
+    
+    for(i in 1:nSites){
+
+        # Model for deposition ---------------------------------------------------------------------------------------------------------------------------------------
+
+        # This iteration of the model has a slightly different structure for N due to changes in simulation.
+        # Before, y_t ~ Bin(N_t-1, p)
+        # Now,    y_t ~ Bin(N_t, p)
+        
+        # Initial deposition is Poisson random, and occurs on June 1, 2016 (arbitrary selection, but is the first visit to any site).
+        N1[i] ~ dpois(lambda[i])
+        # Time 1 is visit 1, but indexed by 2, since we need to model the initial N. I choose to call that period before any visits time 0.
+
+        # Linear model for lambda.  Include fixed/random effects here later
+        lambda[i] = exp(lambda0                 *   gridCovariates[i,1]  + 
+                        beta_northing       *   gridCovariates[i,2]  + 
+                        beta_easting        *   gridCovariates[i,3]  + 
+                        beta_elev           *   gridCovariates[i,4]  + 
+                        beta_highway        *   gridCovariates[i,5]  + 
+                        beta_minor_road     *   gridCovariates[i,6]  + 
+                        beta_hab_softwood   *   gridCovariates[i,7]  + 
+                        beta_hab_hardwood   *   gridCovariates[i,8]  + 
+                        beta_hab_mixed      *   gridCovariates[i,9]  + 
+                        beta_hab_wetland    *   gridCovariates[i,10]
+                        ) # somewhat immaterial except for mechanistic model of deposition process and observation.
+        
+        # Initial deposition of scats. There are no collections, and assumed to be no degradation until we visit, so N[i,1,v] is equal over all v.
+        for(v in 1:maxV){
+
+            N[i,1,v] = N1[i]
+            
+        }
+
+        # Deposition between time 0 and first visit is found in days[i,1]
+        for(t in 1:(maxT - 1)){
+
+            R[i,t] ~ dpois(theta[i]*days[i,t]) # Every round has some added deposition after we leave. It is dependent upon the DAYS in between visits.
+            # For instance, R[i,2] ~ dpois(theta[i]*days[i,2]), where days[i,2] is the intervening time
+            
+        }
+        # Linear model for theta. Include fixed/random effects here later
+        theta[i] = exp(theta00                  *   gridCovariates[i,1]  + 
+                       beta_northing      *   gridCovariates[i,2]  + 
+                       beta_easting       *   gridCovariates[i,3]  + 
+                       beta_elev          *   gridCovariates[i,4]  +                        
+                       beta_highway       *   gridCovariates[i,5]  + 
+                       beta_minor_road    *   gridCovariates[i,6]  +
+                       beta_hab_softwood  *   gridCovariates[i,7]  + 
+                       beta_hab_hardwood  *   gridCovariates[i,8]  + 
+                       beta_hab_mixed     *   gridCovariates[i,9]  + 
+                       beta_hab_wetland   *   gridCovariates[i,10]
+        )
+        # Proceeding N's add new recruits and remove current counts from the previous time step's N.
+        # Recruits are random poisson variates with mean theta.        
+
+        # Mechanism for scat removals/deposition ------------------------------------------------------------------------------------------
+        for(t in 2:maxT){            
+
+             # First time going to a sampling unit what's there is what was there last time, minus what we picked up last time, plus what deposition happened last time.
+            N[i,t,1] = N[i,t-1,maxV] - y[i,t-1,maxV] + R[i,t-1]
+
+            # On subsequent visits within a sample occasion to a sampling unit, what's there is what was there after the first visit, minus what we picked up, all the way to maxV (20 in 2016).
+            for(v in 2:maxV){
+                N[i,t,v] = N[i,t,v-1] - y[i,t,v-1]
+            }
+            
+        }
+        
+        # Observation likelihood. Counts are conditional on population size at previous time step (after recruits and removals), and detection (which also depends on having visited the site). ------------------
+        for(t in 2:maxT){ 
+            for(v in 1:maxV){
+
+                # Covariates on detection
+                logit(p0[i,t,v]) = pInt + 
+                                   Dcov[i,t-1,v]*beta_detect_dist + 
+                                   dogCov[i,t-1,1]*beta_detect_skye +
+                                   dogCov[i,t-1,2]*beta_detect_scooby +
+                                   dogCov[i,t-1,3]*beta_detect_ranger +
+                                   dogCov[i,t-1,4]*beta_detect_max +
+                                   dogCov[i,t-1,5]*beta_detect_hiccup +
+                                   humCov[i,t-1,1]*beta_detect_suzie + 
+                                   humCov[i,t-1,2]*beta_detect_jennifer + 
+                                   humCov[i,t-1,3]*beta_detect_justin 
+
+                # adjust p0 such that those sites not visited are set to 0. Initially, all sites are p0[i,t] = 0.8
+                # vis is a matrix of binary indicators with '1' being 'visited', and '0' being 'not visited'. Multiply by p0 to fix 'not visited' sites to p = 0, and obtain a new matrix.
+                p[i,t,v] = p0[i,t,v] * vis[i,t,v]
+
+                y[i,t,v] ~ dbin(p[i,t,v], N[i,t,v])
+
+            } 
+        }
+
+        #density[i] = (theta[i] / per_moose_deposition) / 2500 # density of moose per grid cell (50m x 50m = 2500m)
+
+    }
+    
+    
+
+}
