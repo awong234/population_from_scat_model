@@ -1,4 +1,5 @@
 # Reduced covariate model with only continouous effects, changed to share coefficients between lambda and theta
+# 6 betas
 
 model
 {

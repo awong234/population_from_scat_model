@@ -1,5 +1,6 @@
 # Critical factors expected to reflect moose population best. 
 # Changed to share coefficients between theta and lambda, to reduce parameter space
+# 7 betas
 
 model
 {
