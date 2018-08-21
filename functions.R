@@ -1300,21 +1300,10 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
 
 inits = function(){ 
   
-  inits = list(
+  list(
     N1 = rowSums(y),
     theta00 = rnorm(n = 1, mean = -6, sd = 2),
-    lambda0 = rnorm(n = 1, mean = -4, sd = 2),
-    p00 = 0.5
-  )
-  
-  betas = params[!params %in% names(inits)]
-  
-  inits = c(inits, 
-            Map(f = function(names){
-              x = rnorm(1,0,1)
-              return(x)
-            }, names = betas))
-  
-  return(inits)
+    lambda0 = rnorm(n = 1, mean = -4, sd = 2)
+  ) 
   
 }
