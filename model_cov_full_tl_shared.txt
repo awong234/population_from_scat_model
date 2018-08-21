@@ -1,4 +1,5 @@
 # Full covariate model, changed to share covariate coefficients between theta and lambda
+# 19 betas
 
 model
 {

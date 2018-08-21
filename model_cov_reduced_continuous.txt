@@ -1,4 +1,5 @@
 # Reduced covariate model with only continouous effects
+# 11 betas
 
 model
 {
