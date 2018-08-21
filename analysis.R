@@ -218,7 +218,7 @@ system(command = 'python sendMail.py')
 
 # Covariate analyses
 
-# JAGS Full model ---------------------------------------------------------------------------------------------------------------------------------------------------
+# JAGS Full model, theta lambda sep ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Setup & data
 
@@ -299,7 +299,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
-# JAGS Reduced critical model ---------------------------------------------------------------
+# Critical model, theta lambda sep ---------------------------------------------------------------
 
 # Includes only those variables that are EXPECTED to correlate well. 
 
@@ -396,7 +396,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
-# JAGS Reduced continous model ------------------------------------------------------------------------------------
+# Continous model, theta lambda sep ------------------------------------------------------------------------------------
 
 # Only continuous factors 
 
@@ -491,6 +491,98 @@ fileNameTemp = 'out_reduced_crit_2018-08-20_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_continuous.txt', 
                   n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+)
+
+
+# Critical model, shared theta lambda ----------------------------------------------------------------------------------------------------------------
+
+# Includes only those variables that are EXPECTED to correlate well. 
+
+# Setup & data
+
+library(dplyr)
+library(jagsUI)
+
+
+source('functions.R')
+
+
+load('data_cleaned.Rdata')
+load('metadata.Rdata')
+extract(data)
+
+# Want to create a function of JAGS runs that operates similarly to autojags, but that saves intermediate output. I don't want interruptions cancelling work.
+
+load('detectCovar.Rdata')
+load('gridCovariates.Rdata')
+
+extract(detectCovar)
+
+# Add covariates to data
+
+data$gridCovariates = gridCovariates
+data$Dcov = Dcov
+data$dogCov = dogCov
+data$humCov = humCov
+
+
+params = c("theta00", "p00", "lambda0", 
+           # Lambda covars
+           'beta_hab_softwood', 
+           'beta_hab_hardwood', 
+           'beta_hab_wetland', 
+           'beta_hab_mixed', 
+           'beta_elev', 
+           #'beta_highway', 
+           #'beta_minor_road', 
+           'beta_northing', 
+           #'beta_easting',
+           
+           # Detect covars - dog
+           #'beta_detect_skye', 'beta_detect_scooby', 'beta_detect_ranger', 'beta_detect_max', 'beta_detect_hiccup', 
+           # Detect covars - handler
+           #'beta_detect_suzie', 'beta_detect_jennifer', 'beta_detect_justin',
+           # Detect covars - dist track in grid cell
+           'beta_detect_dist'
+)
+
+inits = function(){ 
+  
+  list(
+    N1 = rowSums(y),
+    theta00 = rnorm(n = 1, mean = -6, sd = 2),
+    lambda0 = rnorm(n = 1, mean = -4, sd = 2),
+    Map(f = function(names){x = rnorm(1,0,0.01); return(x)}, names = params)
+  )
+  
+}
+
+# New autojags FN
+
+ninc = 1000
+nburn = 1000
+nadapt = 10000
+savePath = 'modelOutputs/rCrit_tl_shared/'
+fileNameTemp = paste0('out_reduced_crit_tl_shared_', Sys.time() %>% format("%Y-%m-%d"), "_")
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp
+)
+
+system(command = 'python sendMail.py')
+
+# Continue if interrupted
+
+ninc = 1000
+nburn = 1000
+savePath = 'modelOutputs/rCrit/'
+# Change to continuing date
+fileNameTemp = 'out_reduced_crit_2018-08-19_'
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
