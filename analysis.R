@@ -349,6 +349,7 @@ nburn = 1000
 nadapt = 10000
 savePath = 'modelOutputs/rCrit/'
 fileNameTemp = paste0('out_reduced_crit_', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
@@ -438,6 +439,7 @@ nburn = 1000
 nadapt = 10000
 savePath = 'modelOutputs/rCont/'
 fileNameTemp = paste0('out_reduced_cont_', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_continuous.txt', 
                   n.chains = 4, n.adapt = nadapt, 
@@ -520,6 +522,8 @@ ninc = 1000
 nburn = 1000
 nadapt = 10000
 savePath = 'modelOutputs/rCrit_tl_shared/'
+if(!dir.exists(savePath)){dir.create(savePath)}
+
 fileNameTemp = paste0('out_reduced_crit_tl_shared_', Sys.time() %>% format("%Y-%m-%d"), "_")
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
@@ -603,6 +607,7 @@ nburn = 1000
 nadapt = 10000
 savePath = 'modelOutputs/rCrit_tl_shared/'
 fileNameTemp = paste0('out_reduced_crit_tl_shared_', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
