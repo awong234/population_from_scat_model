@@ -1,4 +1,4 @@
-# Full covariate model
+# Critical factors expected to reflect moose population best. 
 
 model
 {
