@@ -1,5 +1,5 @@
 # Reduced covariate model with only continouous effects, changed to share coefficients between lambda and theta
-# 6 betas
+# 5 betas
 
 model
 {
@@ -18,7 +18,7 @@ model
     beta_highway            ~ dnorm(0,0.01) # prior for highway effect
     beta_minor_road         ~ dnorm(0,0.01) # prior for an index of human effect, local road density
     beta_northing           ~ dnorm(0,0.01) # prior for northing effect
-    beta_easting            ~ dnorm(0,0.01) # prior for easting effect
+    #beta_easting            ~ dnorm(0,0.01) # prior for easting effect
 
     # Priors for detection fixed effects
 
@@ -49,7 +49,7 @@ model
         # Linear model for lambda.  Include fixed/random effects here later
         lambda[i] = exp(lambda0                 *   gridCovariates[i,1]  + 
                         beta_northing       *   gridCovariates[i,2]  + 
-                        beta_easting        *   gridCovariates[i,3]  + 
+                        #beta_easting        *   gridCovariates[i,3]  + 
                         beta_elev           *   gridCovariates[i,4]  + 
                         beta_highway        *   gridCovariates[i,5]  + 
                         beta_minor_road     *   gridCovariates[i,6]  #+ 
@@ -76,7 +76,7 @@ model
         # Linear model for theta. Include fixed/random effects here later
         theta[i] = exp(theta00                  *   gridCovariates[i,1]  + 
                        beta_northing      *   gridCovariates[i,2]  + 
-                       beta_easting       *   gridCovariates[i,3]  + 
+                       #beta_easting       *   gridCovariates[i,3]  + 
                        beta_elev          *   gridCovariates[i,4]  +                        
                        beta_highway       *   gridCovariates[i,5]  + 
                        beta_minor_road    *   gridCovariates[i,6]  #+
