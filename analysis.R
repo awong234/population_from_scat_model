@@ -51,6 +51,33 @@ data$per_moose_deposition = mean(defecationRates$mean)
 
 params = c("theta00", "p00", "lambda0")
 
+# New autojags FN
+
+ninc = 5000
+nburn = 5000
+nadapt = 10000
+savePath = 'modelOutputs/'
+fileNameTemp = paste0('out_null_', Sys.time() %>% format("%Y-%m-%d"), "_")
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp
+)
+
+# Continue if interrupted
+
+ninc = 5000
+nburn = 5000
+savePath = 'modelOutputs/'
+# Change to continuing date
+fileNameTemp = 'out_null_2018-08-21_'
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_null.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+)
+
+
 # what to initialize? in the sims, we needed to initialize R, and N1. 
 
 # N1 in particular needs to be initialized to avoid the impossible situation where there are fewer scats in the initial deposition than we picked up.
@@ -208,7 +235,7 @@ system(command = 'python sendMail.py')
 
 # Covariate analyses
 
-# JAGS Full model, theta lambda sep ---------------------------------------------------------------------------------------------------------------------------------------------------
+# JAGS Full model, DIFFERENT theta lambda ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Setup & data
 
@@ -281,7 +308,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
-# Critical model, theta lambda sep ---------------------------------------------------------------
+# Critical model, DIFFERENT theta lambda ---------------------------------------------------------------
 
 # Includes only those variables that are EXPECTED to correlate well. 
 
@@ -369,7 +396,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
-# Continous model, theta lambda sep ------------------------------------------------------------------------------------
+# Continous model, DIFFERENT theta lambda ------------------------------------------------------------------------------------
 
 # Only continuous factors 
 
@@ -518,8 +545,8 @@ params = c("theta00", "p00", "lambda0",
 
 # New autojags FN
 
-ninc = 1000
-nburn = 1000
+ninc = 2000
+nburn = 2000
 nadapt = 10000
 savePath = 'modelOutputs/rCrit_tl_shared/'
 if(!dir.exists(savePath)){dir.create(savePath)}
@@ -535,12 +562,12 @@ system(command = 'python sendMail.py')
 
 # Continue if interrupted
 
-ninc = 1000
-nburn = 1000
+ninc = 2000
+nburn = 2000
 nadapt = 10000
 savePath = 'modelOutputs/rCrit_tl_shared/'
 # Change to match whatever continuing from
-fileNameTemp = 'out_reduced_crit_2018-08-19_'
+fileNameTemp = 'out_reduced_crit_tl_shared_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
@@ -599,17 +626,16 @@ params = c("theta00", "p00", "lambda0",
            'beta_detect_dist'
 )
 
-
 # New autojags FN
 
-ninc = 1000
-nburn = 1000
+ninc = 2000
+nburn = 2000
 nadapt = 10000
-savePath = 'modelOutputs/rCrit_tl_shared/'
-fileNameTemp = paste0('out_reduced_crit_tl_shared_', Sys.time() %>% format("%Y-%m-%d"), "_")
+savePath = 'modelOutputs/rCont_tl_shared/'
+fileNameTemp = paste0('out_reduced_cont_tl_shared_', Sys.time() %>% format("%Y-%m-%d"), "_")
 if(!dir.exists(savePath)){dir.create(savePath)}
 
-output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_continuous_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
                   savePath = savePath, fileNameTemplate = fileNameTemp
 )
@@ -621,12 +647,78 @@ system(command = 'python sendMail.py')
 ninc = 1000
 nburn = 1000
 nadapt = 10000
-savePath = 'modelOutputs/rCrit_tl_shared/'
+savePath = 'modelOutputs/rCont_tl_shared/'
 # Change to match whatever continuing from
-fileNameTemp = 'out_reduced_crit_2018-08-19_'
+fileNameTemp = 'out_reduced_cont_tl_shared_DATEDATEDATEDATE'
 
-output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_continuous_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
+# Detection distance covariate only -------------------------------------------------------------------------------------------------------------------
+
+# An improvement (?) on the null model.
+
+# Includes only those variables that are EXPECTED to correlate well. 
+
+# Setup & data
+
+library(dplyr)
+library(jagsUI)
+
+
+source('functions.R')
+
+
+load('data_cleaned.Rdata')
+load('metadata.Rdata')
+extract(data)
+
+# Want to create a function of JAGS runs that operates similarly to autojags, but that saves intermediate output. I don't want interruptions cancelling work.
+
+load('detectCovar.Rdata')
+load('gridCovariates.Rdata')
+
+extract(detectCovar)
+
+# Add covariates to data
+
+data$gridCovariates = gridCovariates
+data$Dcov = Dcov
+data$dogCov = dogCov
+data$humCov = humCov
+
+
+params = c("theta00", "p00", "lambda0", 'beta_detect_dist')
+
+
+# New autojags FN
+
+ninc = 2000
+nburn = 2000
+nadapt = 10000
+savePath = 'modelOutputs/rDcov/'
+fileNameTemp = paste0('out_reduced_Dcov_', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_Dcov_only.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp
+)
+
+system(command = 'python sendMail.py')
+
+# Continue if interrupted
+
+ninc = 2000
+nburn = 2000
+nadapt = 10000
+savePath = 'modelOutputs/rDcov/'
+# Change to match whatever continuing from
+fileNameTemp = 'out_reduced_Dcov_2018-08-19_'
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_Dcov_only.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+)
