@@ -68,6 +68,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
 
 ninc = 5000
 nburn = 5000
+nadapt = 10000
 savePath = 'modelOutputs/'
 # Change to continuing date
 fileNameTemp = 'out_null_2018-08-21_'
@@ -616,7 +617,7 @@ params = c("theta00", "p00", "lambda0",
            'beta_highway', 
            'beta_minor_road', 
            'beta_northing', 
-           'beta_easting',
+           #'beta_easting',
            
            # Detect covars - dog
            #'beta_detect_skye', 'beta_detect_scooby', 'beta_detect_ranger', 'beta_detect_max', 'beta_detect_hiccup', 
