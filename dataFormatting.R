@@ -834,6 +834,10 @@ Dcov[which(!(Dcov > 0) == (vis[,2:5,] > 0))] = 1
 which(!(Dcov > 0) == (vis[,2:5,] > 0))
 which(!(Dcov == 0) == (vis[,2:5,] == 0))
 
+# Scale and center
+
+Dcov = scale(Dcov)
+
 # Old tests
 
 if(!skip){
