@@ -53,31 +53,29 @@ params = c("theta00", "p00", "lambda0")
 
 # New autojags FN
 
-ninc = 5000
-nburn = 5000
-nadapt = 10000
+ninc = 100
+nburn = 100
+nadapt = 100
 savePath = 'modelOutputs/'
 fileNameTemp = paste0('out_null_', Sys.time() %>% format("%Y-%m-%d"), "_")
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp
+                  savePath = savePath, fileTemplate = fileNameTemp
 )
 
-# Continue if interrupted
+# Continue if interrupted. CONTINUE = TRUE is the only argument needed; the
+# backup image will be loaded to continue everything **AS IT WAS** at the end of
+# the previous while loop. The arguments passed are *probably* not necessary,
+# but better than risking defaults being set.
 
-ninc = 5000
-nburn = 5000
-nadapt = 10000
-savePath = 'modelOutputs/'
-# Change to continuing date
-fileNameTemp = 'out_null_2018-08-21_'
+load('modelOutputs/latestBackup.Rdata')
 
-output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_null.txt', n.chains = 4, n.adapt = nadapt, 
-                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
-)
-
+output = autojags(data = NULL, parameters.to.save = params, n.chains = 4, n.adapt = nadapt, iter.increment = ninc, 
+                  n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6, 
+                  continue = T, savePath = savePath, fileTemplate = fileNameTemp
+                  )
+autojags(continue = T, savePath = savePath, fileTemplate = fileTemplate)
 
 # what to initialize? in the sims, we needed to initialize R, and N1. 
 
@@ -556,23 +554,18 @@ fileNameTemp = paste0('out_reduced_crit_tl_shared_', Sys.time() %>% format("%Y-%
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp
+                  savePath = savePath, fileTemplate = fileNameTemp
 )
 
 system(command = 'python sendMail.py')
 
 # Continue if interrupted
 
-ninc = 2000
-nburn = 2000
-nadapt = 10000
-savePath = 'modelOutputs/rCrit_tl_shared/'
-# Change to match whatever continuing from
 fileNameTemp = 'out_reduced_crit_tl_shared_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_crit_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE
 )
 
 # Continuous model, shared theta lambda ----------------------------------------------------------------------------------------------------------------
@@ -638,7 +631,7 @@ if(!dir.exists(savePath)){dir.create(savePath)}
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_continuous_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp
+                  savePath = savePath, fileTemplate = fileNameTemp
 )
 
 system(command = 'python sendMail.py')
@@ -705,7 +698,7 @@ if(!dir.exists(savePath)){dir.create(savePath)}
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_Dcov_only.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp
+                  savePath = savePath, fileTemplate = fileNameTemp
 )
 
 system(command = 'python sendMail.py')
