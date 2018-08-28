@@ -473,8 +473,16 @@ extract(metadata)
 gridNorth = visitedGridInfo$y
 gridNorth_scaled = scale(gridNorth)
 
+gridNorth_metrics_center = attributes(gridNorth_scaled)$`scaled:center`
+gridNorth_metrics_scale = attributes(gridNorth_scaled)$`scaled:scale`
+
 gridEast = visitedGridInfo$x
 gridEast_scaled = scale(gridEast)
+
+gridEast_metrics_center = attributes(gridEast_scaled)$`scaled:center`
+gridEast_metrics_scale = attributes(gridEast_scaled)$`scaled:scale`
+
+
 
 # Format Elevation covariate ------------------------------------------------------------
 
@@ -538,6 +546,9 @@ if(!skip){
 # Scale
 
 scaledElev = scale(elevCov$elev)
+
+elev_metrics_scale = attributes(scaledElev)$`scaled:scale`
+elev_metrics_center = attributes(scaledElev)$`scaled:center`
 
 # Format Habitat covariate ------------------------------------------------------------
 
@@ -717,6 +728,8 @@ if(!skip){
 # Scale
 
 scaledMinRoad = scale(minRoadCov$density)
+minRoad_metrics_center = attr(x = scale(minRoadCov$density), which = 'scaled:center')
+minRoad_metrics_scale  = attr(x = scale(minRoadCov$density), which = 'scaled:scale')
 
 # Same process as elevation
 
@@ -836,7 +849,10 @@ which(!(Dcov == 0) == (vis[,2:5,] == 0))
 
 # Scale and center
 
-Dcov = scale(Dcov)
+Dcov_metrics_center = attr(x = scale(Dcov), which = 'scaled:center')
+Dcov_metrics_scale = attr(x = scale(Dcov), which = 'scaled:scale')
+
+Dcov_scaled = array(data = scale(Dcov), dim = dim(Dcov))
 
 # Old tests
 
@@ -919,7 +935,7 @@ detectCovar = list(
   intercept = matrix(1, nrow = nSites, ncol = maxT-1),
   dogCov = dogCov,
   humCov = humCov,
-  Dcov = Dcov
+  Dcov = Dcov_scaled
 )
 
 save(detectCovar, file = 'detectCovar.Rdata')
