@@ -466,6 +466,13 @@ extract(metadata)
 
 # Need covariates each as a vector nSites long - one value per covariate.
 
+scaleMetrics = data.frame("Covariate" =  character(0), 
+                          "Center" = numeric(0), 
+                          "Scale"  = numeric(0)
+                          )
+
+
+
 # Format Coordinate covariate ------------------------------------------------------------
 
 # Assign Coordinate value per grid cell. Easy.
@@ -473,15 +480,13 @@ extract(metadata)
 gridNorth = visitedGridInfo$y
 gridNorth_scaled = scale(gridNorth)
 
-gridNorth_metrics_center = attributes(gridNorth_scaled)$`scaled:center`
-gridNorth_metrics_scale = attributes(gridNorth_scaled)$`scaled:scale`
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "Northing", Center = attributes(gridNorth_scaled)[2], Scale = attributes(gridNorth_scaled)[3])
+
 
 gridEast = visitedGridInfo$x
 gridEast_scaled = scale(gridEast)
 
-gridEast_metrics_center = attributes(gridEast_scaled)$`scaled:center`
-gridEast_metrics_scale = attributes(gridEast_scaled)$`scaled:scale`
-
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "Easting", Center = attributes(gridEast_scaled)[2], Scale = attributes(gridEast_scaled)[3])
 
 
 # Format Elevation covariate ------------------------------------------------------------
@@ -547,8 +552,7 @@ if(!skip){
 
 scaledElev = scale(elevCov$elev)
 
-elev_metrics_scale = attributes(scaledElev)$`scaled:scale`
-elev_metrics_center = attributes(scaledElev)$`scaled:center`
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "Elevation", Center = attributes(scaledElev)[2], Scale = attributes(scaledElev)[3])
 
 # Format Habitat covariate ------------------------------------------------------------
 
@@ -670,6 +674,7 @@ if(!skip){
 
 scaledHighway = scale(highwayCov$density)
 
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "Highway", Center = attributes(scaledHighway)[2], Scale = attributes(scaledHighway)[3])
 
 
 # Format minor road density covariate ----------------------------------------------------------------------
@@ -728,8 +733,9 @@ if(!skip){
 # Scale
 
 scaledMinRoad = scale(minRoadCov$density)
-minRoad_metrics_center = attr(x = scale(minRoadCov$density), which = 'scaled:center')
-minRoad_metrics_scale  = attr(x = scale(minRoadCov$density), which = 'scaled:scale')
+
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "MinorRoad", Center = attributes(scaledMinRoad)[2], Scale = attributes(scaledMinRoad)[3])
+
 
 # Same process as elevation
 
@@ -823,6 +829,26 @@ if(!skip){
 
 ## Format length of track within grid cell. ------------------------------------------------------------
 
+if(!exists("tracks2016_points")){
+  tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer = 'tracks2016_points_clean', stringsAsFactors = F)
+  attr(tracks2016_points@coords, 'dimnames') = list(NULL, c("Easting", "Northing"))
+  
+  roundVisits = tracks2016_points@data %>% select(Site, Date, RndBySt) %>% unique %>% arrange(Site, Date)
+  
+  roundVisits$VisitRank = siteVisitRank(sortedSites = roundVisits$Site)
+  
+  roundVisits = roundVisits %>% arrange(Date)
+  
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+  rleTracks = rlePoints(visitInfo = roundVisits, points = tracks2016_points, grids = grids, plots = F)
+  names(rleTracks) = roundVisits$RndBySt
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+  
+}
+
+
 # Distance values for every grid cell, sample occasion, and replicate.
 # Without parallel takes 200 s; with parallel takes 96s
 
@@ -849,8 +875,8 @@ which(!(Dcov == 0) == (vis[,2:5,] == 0))
 
 # Scale and center
 
-Dcov_metrics_center = attr(x = scale(Dcov), which = 'scaled:center')
-Dcov_metrics_scale = attr(x = scale(Dcov), which = 'scaled:scale')
+Dcov_scaled = scale(Dcov)
+scaleMetrics = scaleMetrics %>% add_row(Covariate = "DetectDist", Center = attributes(Dcov_scaled)[2], Scale = attributes(Dcov_scaled)[3])
 
 Dcov_scaled = array(data = scale(Dcov), dim = dim(Dcov))
 
@@ -939,3 +965,10 @@ detectCovar = list(
 )
 
 save(detectCovar, file = 'detectCovar.Rdata')
+
+# Save scale information ------------------------------------------------------------------------
+
+scaleMetrics$Center = scaleMetrics$Center %>% unlist %>% unname()
+scaleMetrics$Scale  = scaleMetrics$Scale %>% unlist %>% unname()
+
+save(scaleMetrics, file = 'scaleMetrics.Rdata')
