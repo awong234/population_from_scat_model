@@ -712,6 +712,7 @@ runFunc = function(comboSet, iteration, gridsVisited){
 
 extract = function(what){invisible(Map(f = function(x,y){assign(x = x, value = y, pos = 1)}, x = names(what), y = what))}
 
+# For assessing older sims
 assessOutputs = function(f, file.list, analysisIDs, settings){
   
   load(file.list[f])
@@ -743,6 +744,68 @@ assessOutputs = function(f, file.list, analysisIDs, settings){
                     lower95 = output[1:7,3],
                     upper95 = output[1:7,7],
                     ID = analysisID))
+  
+}
+
+# Bootstrap summary for big stuff
+
+bs_summ = function(value, input_bs){
+  calc = value / input_bs
+  calc_mean = mean(calc)
+  calc_quant = quantile(calc, prob = c(0.025, 0.5, 0.95))
+  return(c(calc_mean, calc_quant))
+}
+
+# Summarize outputs and boostrap deposition
+
+summarizeOutput = function(predict_grid, theta, estimates, covariates){
+  
+  if(is.null(covariates)){
+    
+    totalArea = area * nrow(predict_grid)
+    
+    (MooseAbundanceMean = (exp(theta[1]) / mean(defecationRates$mean)) * (totalArea / analysisArea))
+    MooseAbundanceCI = (exp(theta[c(2,3)]) / mean(defecationRates$mean)) * (totalArea / analysisArea)
+    
+    MooseAbundance = data.frame("Estimate" = MooseAbundanceMean, "Lower 95%" = MooseAbundanceCI[1], "Upper 95%" = MooseAbundanceCI[2])
+    
+    # Bootstrap defecation rate fitting means to gamma distribution.
+    
+    bootstrapDef = rgamma(n = 1e5, shape = gShape, rate = gRate)
+    
+    MooseAbundanceMeanBS = (exp(meanTheta) / bootstrapDef) * (totalArea / analysisArea)
+    MooseAbundanceCIBS = foreach(i = ciTheta, .combine = cbind) %do% (exp(i) / bootstrapDef) * (totalArea / analysisArea)
+    
+    MooseAbundanceBS = data.frame("Estimate" = MooseAbundanceMeanBS, "Lower 95%" = MooseAbundanceCIBS[,1], "Upper 95%" = MooseAbundanceCIBS[,2])
+    
+    finalQuantiles = MooseAbundanceBS %>% unlist %>% quantile(prob = c(0.025, 0.5, 0.95))
+    
+    outList = list(summary = MooseAbundance, summary_bs = MooseAbundanceBS, bs_quantiles = finalQuantiles)
+    
+  } else {
+    # browser()
+    
+    N = foreach(t = theta, .combine = cbind) %do% {
+      meanN = (t / mean(defecationRates$mean)) * (area / analysisArea)
+    }
+    
+    MooseAbundance = data.frame("Estimate" = sum(N[,1]), "Lower 95%" = sum(N[,2]), "Upper 95%" = sum(N[,3]))
+    
+    # Bootstrap defecation rate fitting means to gamma distribution.
+    
+    bootstrapDef = rgamma(n = 1e5, shape = gShape, rate = gRate)
+    # browser()
+    
+    N_bs = foreach(t = theta, .combine = rbind) %do% {
+      out = lapply(X = t, FUN = bs_summ, input_bs = bootstrapDef)
+      out = (do.call(what = rbind, args = out) * (area / analysisArea)) %>% colSums()
+      return(out)
+    }
+    
+    outList = list(gridEstimates = N, summary = MooseAbundance, summary_bs = N_bs)
+    
+  }
+  
   
 }
 
@@ -1082,8 +1145,8 @@ select_groups <- function(data, groups, ...)
 
 summarizeRastFromGrid = function(grids, raster, method = 'mean'){
   
-  out = foreach(grid = 1:length(grids)) %do% {
-  # for(grid in 1:length(grids)){
+  # out = foreach(grid = 1:length(grids)) %do% {
+  for(grid in 1:length(grids)){
     # browser()
     grid_temp = grids[[grid]]
     
@@ -1106,7 +1169,7 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
       rasterSummary = raster::getValues(smallRast)
       
     } 
-    
+    browser()
     rasterSummary_df = cbind(grid_temp@data, grid_temp %>% coordinates, rasterSummary)
     
     return(rasterSummary_df)
@@ -1296,7 +1359,28 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
   return(Dcov)
 }
 
-# Jags functions
+imputeMissing = function(spdf, dataCol, nNeighbors = 9){
+  # browser()
+  nadist = fields::rdist(spdf@coords[!complete.cases(spdf@data),], spdf@coords)
+  nadist_order = nadist %>% apply(MARGIN = 1, FUN = order) %>% t
+  
+  neighborhood = nadist_order[,2:10]
+  
+  for(r in 1:nrow(neighborhood)){
+    
+    temp = spdf[r,]
+    
+    meanValue = temp[[dataCol]] %>% mean(na.rm = T)
+    
+    spdf[nadist_order[r,1],dataCol] = meanValue
+    
+  }
+  
+  return(return(spdf))
+  
+}
+
+# Jags functions ------------------------------------------------------------------------------------------
 
 inits = function(){ 
   
@@ -1307,3 +1391,4 @@ inits = function(){
   ) 
   
 }
+
