@@ -758,7 +758,7 @@ bs_summ = function(value, input_bs){
 
 # Summarize outputs and boostrap deposition
 
-summarizeOutput = function(predict_grid, theta, estimates, covariates){
+summarizeOutput = function(predict_grid, theta, covariates){
   
   if(is.null(covariates)){
     
@@ -772,13 +772,10 @@ summarizeOutput = function(predict_grid, theta, estimates, covariates){
     # Bootstrap defecation rate fitting means to gamma distribution.
     
     bootstrapDef = rgamma(n = 1e5, shape = gShape, rate = gRate)
+    # browser()
+    MooseAbundanceBS = foreach(i = 1:length(theta), .combine = cbind) %do% (exp(theta[i]) / bootstrapDef) * (totalArea / analysisArea)
     
-    MooseAbundanceMeanBS = (exp(meanTheta) / bootstrapDef) * (totalArea / analysisArea)
-    MooseAbundanceCIBS = foreach(i = ciTheta, .combine = cbind) %do% (exp(i) / bootstrapDef) * (totalArea / analysisArea)
-    
-    MooseAbundanceBS = data.frame("Estimate" = MooseAbundanceMeanBS, "Lower 95%" = MooseAbundanceCIBS[,1], "Upper 95%" = MooseAbundanceCIBS[,2])
-    
-    finalQuantiles = MooseAbundanceBS %>% unlist %>% quantile(prob = c(0.025, 0.5, 0.95))
+    finalQuantiles = MooseAbundanceBS %>% quantile(prob = c(0.025, 0.5, 0.95))
     
     outList = list(summary = MooseAbundance, summary_bs = MooseAbundanceBS, bs_quantiles = finalQuantiles)
     
@@ -1155,6 +1152,7 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
     grid_temp_raster = raster::raster(grid_temp)
     
     if(method == 'mean'){
+      # Have to project the raster so that they share the same extent. Maybe it will work without it? Seems to be taking a while.
       smallRast = raster::projectRaster(raster, grid_temp_raster)
       rasterSummary = raster::extract(x = smallRast, y = grid_temp_spdf, fun = mean, na.rm = T)
     }
@@ -1169,7 +1167,7 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
       rasterSummary = raster::getValues(smallRast)
       
     } 
-    browser()
+    # browser()
     rasterSummary_df = cbind(grid_temp@data, grid_temp %>% coordinates, rasterSummary)
     
     return(rasterSummary_df)
@@ -1178,6 +1176,15 @@ summarizeRastFromGrid = function(grids, raster, method = 'mean'){
   
  return(out) 
   
+}
+
+# Alternatively, use resample
+
+resample_fn = function(data, predict_grid_raster) {
+  dataSummary = raster::resample(data, predict_grid_raster)
+  dataSummary_spdf = as(dataSummary, "SpatialPixelsDataFrame")
+  dataSummary_df = dataSummary_spdf %>% data.frame
+  return(dataSummary_df)
 }
 
 diffDist = function(pts){
