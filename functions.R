@@ -1368,20 +1368,32 @@ trackDistPerRep = function(tracks, rleTracks, visitedGridInfo, roundVisits, debu
 
 imputeMissing = function(spdf, dataCol, nNeighbors = 9){
   # browser()
-  nadist = fields::rdist(spdf@coords[!complete.cases(spdf@data),], spdf@coords)
-  nadist_order = nadist %>% apply(MARGIN = 1, FUN = order) %>% t
+  missingIndex = which(!complete.cases(spdf@data))
   
-  neighborhood = nadist_order[,2:10]
-  
-  for(r in 1:nrow(neighborhood)){
+  for(i in missingIndex){
+    # browser()
+    nadist = fields::rdist(spdf@coords[i,] %>% matrix(ncol = 2), spdf@coords)
+    nadist_order = nadist %>% apply(MARGIN = 1, FUN = order) %>% t
+    # Need nearest neighbors that AREN'T NA values.
+    neighborhood = nadist_order[,2:nNeighbors + 1]
     
-    temp = spdf[r,]
+    temp = spdf[neighborhood,]
+    index = 1
     
+    while(any(is.na(temp[[dataCol]]))){
+      # browser()
+      numNA = sum(is.na(temp[[dataCol]]))
+      neighborhood = nadist_order[,seq(nNeighbors + index*nNeighbors + 1, length.out = nNeighbors)]
+      temp = spdf[neighborhood,]
+      index = index + 1
+    }
+      
     meanValue = temp[[dataCol]] %>% mean(na.rm = T)
-    
-    spdf[nadist_order[r,1],dataCol] = meanValue
+      
+    spdf[nadist_order[1],dataCol] = meanValue
     
   }
+  
   
   return(return(spdf))
   
