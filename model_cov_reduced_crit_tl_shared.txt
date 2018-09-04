@@ -12,7 +12,7 @@ model
 
     # Priors for landscape fixed effects
     beta_hab_softwood       ~ dnorm(0,0.01) # prior for habitat effect
-    beta_hab_hardwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_hab_hardwood       = 0 # prior for habitat effect, made to be reference category, since it has the most observations.
     beta_hab_wetland        ~ dnorm(0,0.01) # prior for habitat effect
     beta_hab_mixed          ~ dnorm(0,0.01) # prior for habitat effect
     beta_elev               ~ dnorm(0,0.01) # prior for elevation effect
@@ -55,7 +55,7 @@ model
                         #beta_highway        *   gridCovariates[i,5]  + 
                         #beta_minor_road     *   gridCovariates[i,6]  + 
                         beta_hab_softwood   *   gridCovariates[i,7]  + 
-                        beta_hab_hardwood   *   gridCovariates[i,8]  + 
+                        beta_hab_hardwood   *   gridCovariates[i,8]  + # Made to be reference category
                         beta_hab_mixed      *   gridCovariates[i,9]  + 
                         beta_hab_wetland    *   gridCovariates[i,10]
                         ) # somewhat immaterial except for mechanistic model of deposition process and observation.
@@ -82,7 +82,7 @@ model
                        #beta_highway       *   gridCovariates[i,5]  + 
                        #beta_minor_road    *   gridCovariates[i,6]  +
                        beta_hab_softwood  *   gridCovariates[i,7]  + 
-                       beta_hab_hardwood  *   gridCovariates[i,8]  + 
+                       beta_hab_hardwood  *   gridCovariates[i,8]  + # Made to be reference category
                        beta_hab_mixed     *   gridCovariates[i,9]  + 
                        beta_hab_wetland   *   gridCovariates[i,10]
         )
