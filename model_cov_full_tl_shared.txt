@@ -11,7 +11,7 @@ model
 
     # Priors for landscape fixed effects
     beta_hab_softwood       ~ dnorm(0,0.01) # prior for habitat effect
-    beta_hab_hardwood       ~ dnorm(0,0.01) # prior for habitat effect
+    beta_hab_hardwood       = 0 # prior for habitat effect, made to be reference due to most data
     beta_hab_wetland        ~ dnorm(0,0.01) # prior for habitat effect
     beta_hab_mixed          ~ dnorm(0,0.01) # prior for habitat effect
     beta_elev               ~ dnorm(0,0.01) # prior for elevation effect
@@ -24,11 +24,11 @@ model
 
     beta_detect_skye            ~ dnorm(0,0.01) # prior for dog effect
     beta_detect_scooby          ~ dnorm(0,0.01) # prior for dog effect
-    beta_detect_ranger          ~ dnorm(0,0.01) # prior for dog effect
+    beta_detect_ranger          = 0             # prior for dog effect, made to be reference due to most data.
     beta_detect_max             ~ dnorm(0,0.01) # prior for dog effect
     beta_detect_hiccup          ~ dnorm(0,0.01) # prior for dog effect
 
-    beta_detect_suzie           ~ dnorm(0,0.01) # prior for suzie effect
+    beta_detect_suzie           = 0 # prior for suzie effect, made to be reference
     beta_detect_jennifer        ~ dnorm(0,0.01) # prior for suzie effect
     beta_detect_justin          ~ dnorm(0,0.01) # prior for suzie effect
 
