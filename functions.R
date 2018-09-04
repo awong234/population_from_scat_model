@@ -558,7 +558,7 @@ simScats = function(transectPoints, scats_init = 500, gridLayer, siteToTest = "1
         geom_path(data = siteTrackPoints, aes(x = Easting, y = Northing)) +
         geom_point(data = scatXY, aes(x = x, y = y, shape = Removed, color = RoundDeposited), size = 5) + 
         scale_shape_manual(values = c(16,1))
-        
+      
     }
     
     
@@ -775,7 +775,7 @@ summarizeOutput = function(predict_grid, theta, covariates){
     # browser()
     MooseAbundanceBS = foreach(i = 1:length(theta), .combine = cbind) %do% (exp(theta[i]) / bootstrapDef) * (totalArea / analysisArea)
     
-    finalQuantiles = MooseAbundanceBS %>% quantile(prob = c(0.025, 0.5, 0.95))
+    finalQuantiles = MooseAbundanceBS %>% quantile(prob = c(0.025, 0.25, 0.5, 0.75, 0.975))
     
     outList = list(summary = MooseAbundance, summary_bs = MooseAbundanceBS, bs_quantiles = finalQuantiles)
     
