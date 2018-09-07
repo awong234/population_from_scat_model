@@ -305,7 +305,8 @@ files_info = lapply(files_in_folders, FUN = function(x){
 # Only care about the latest file. 
 
 latest_files = lapply(files_info, FUN = function(x){tail(x, n = 1)}) %>% do.call(what = rbind.data.frame)
-latest_files$modName = c("null", "cont", "crit", "dcov")
+latest_files$modName = c("full", "null", "cont", "crit", "dcov")
+latest_files$paths = as.character(latest_files$paths)
 
 ### Perform prediction -----------------------------------------------------------------------------------------
 
@@ -357,10 +358,10 @@ gRate  = fit_nlm$estimate[2]
 # Predict NULL ------------------------------------------------------------------------------------------------
 
 # Using nimble output for null model because it's the best one
-latest_files$paths[1] = 'modelOutputs/null/out_null_nimble_2018-08-19.Rdata'
+latest_files$paths[latest_files$modName == 'null'] = 'modelOutputs/null/out_null_nimble_2018-08-19.Rdata'
 
 # Object is named 'samples'
-load(latest_files$paths[1] %>% as.character())
+load(latest_files$paths[latest_files$modName == 'null'])
 
 samples_mcmc = samples %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
 samples_mcmc_summ = samples_mcmc %>% summary
@@ -379,7 +380,7 @@ save(outList, file = paste0('predictionOutput/null/prediction_NULL_', cellSize, 
 # Predict DCOV ------------------------------------------------------------------------------------------------
 
 # Named 'output'
-load(latest_files$paths[4] %>% as.character())
+load(latest_files$paths[latest_files$modName == 'dcov'])
 
 theta = output$summary[1,c(1,3,7)]
 
@@ -390,7 +391,7 @@ save(outList, file = paste0('predictionOutput/dCov/prediction_dcov_', cellSize, 
 # Predict Continuous ------------------------------------------------------------------------------------------
 
 # named 'output'
-load(latest_files$paths[2] %>% as.character())
+load(latest_files$paths[latest_files$modName == 'cont'])
 
 relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
 
@@ -417,7 +418,7 @@ predict_grid_scaled@data$MeanAbundance = outList$gridEstimates[,1]
 
 ggplot() + 
   geom_tile(data = predict_grid_scaled %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-  scale_fill_continuous(trans = 'log') + 
+  # scale_fill_continuous(trans = 'log') + 
   coord_equal()
 
 if(!skip){
@@ -521,8 +522,8 @@ if(!skip){
   ggplot() + 
     geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
     # scale_fill_continuous(trans = 'log') + 
-    geom_density_2d(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), alpha = .25, color = 'green') +
-    geom_point(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), aes(x = Easting, y = Northing), color = 'red', shape = 1, alpha = 0.5) + 
+    # geom_density_2d(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), alpha = .25, color = 'green') +
+    # geom_point(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), aes(x = Easting, y = Northing), color = 'red', shape = 1, alpha = 0.5) + 
     # geom_point(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), color = 'white', alpha = 0.01) + 
     coord_equal() + theme_bw() + 
     theme(panel.background = element_rect(fill = 'gray5'),
@@ -559,7 +560,7 @@ save(outList, file = paste0('predictionOutput/null/prediction_NULL_',cellSize,'m
 
 # And the dcov model
 
-load(latest_files$paths[4] %>% as.character())
+load(latest_files$paths[latest_files$modName == 'dcov'])
 
 theta = output$summary[1,c(1,3,7)]
 
@@ -730,5 +731,5 @@ if(!skip){
 
 # Predict Critical model --------------------------------------------------------------------------------------
 
-# No sensible results yet.
+load(file = latest_files$paths[latest_files$modName == 'crit'])
 
