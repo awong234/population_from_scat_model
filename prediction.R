@@ -276,6 +276,16 @@ save(predict_grid_raster, file = paste0('predict_grid_raster_', cellSize, '.Rdat
 
 # Start here after setting up prediction grid
 
+
+library(rgeos)
+library(sp)
+library(ggplot2)
+
+source('functions.R')
+
+skip = T
+
+
 cellSize = 1000
 
 load(paste0('predict_grid_', cellSize, '.Rdata'))
@@ -310,296 +320,125 @@ latest_files$paths = as.character(latest_files$paths)
 
 ### Perform prediction -----------------------------------------------------------------------------------------
 
-# Defecation rates --------------------------------------------------------------------------------------------
-
-defecationRates = data.frame(reference = c(rep("Miquelle", 4),
-                                           rep("Joyal&Ricard", 3)),
-                             mean = c(10.9, 19, 13, 11.2,
-                                      12.3, 13.5, 12.1),
-                             se = c(0.5, 0.5, 0.7, 1,
-                                    NA,NA,NA),
-                             sd = c(NA, NA, NA, NA,
-                                    5.8, 6.3, 3.9),
-                             N = c(22, 8, 22, 21, 
-                                   38,  38,  38),
-                             ageClass = c('yearling', 'calf', 'yearling', 'adult',
-                                          'calf', 'adult', 'adult'),
-                             sex = c('mf', 'm', 'm', 'mf',
-                                     'mf', 'f', 'f'),
-                             status = c('captive', 'captive', 'captive', 'free-range',
-                                        'free-range', 'free-range', 'free-range'),
-                             season = c(rep('summer', 4),
-                                        rep('winter', 3))
-)
-
-miquelleRows = defecationRates$reference == 'Miquelle'
-
-defecationRates$sd[miquelleRows] = with(defecationRates, expr = {se * sqrt(N)})[miquelleRows]
-
-# For bootstrapping purposes, fit to gamma distribution.
-par = c(10,1)
-
-gammafn = function(par){
-  nll = dgamma(defecationRates$mean, shape = par[1], rate = par[2], log = T)
-  joint.nll = sum(nll)
-  return(-joint.nll)
-}
-
-gammafn(par)
-
-(fit_optim = optim(par = par, fn = gammafn))
-
-(fit_nlm = nlm(p = par, f = gammafn))
-
-gShape = fit_nlm$estimate[1]
-gRate  = fit_nlm$estimate[2]
-
-
-# Predict NULL ------------------------------------------------------------------------------------------------
-
-# Using nimble output for null model because it's the best one
-latest_files$paths[latest_files$modName == 'null'] = 'modelOutputs/null/out_null_nimble_2018-08-19.Rdata'
-
-# Object is named 'samples'
-load(latest_files$paths[latest_files$modName == 'null'])
-
-samples_mcmc = samples %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
-samples_mcmc_summ = samples_mcmc %>% summary
-
-theta = numeric(length = 3)
-theta[1] = samples_mcmc_summ$statistics[3]
-theta[c(2,3)] = samples_mcmc_summ$quantiles[c(3,15)]
-
-
-# New function 
-
-outList = summarizeOutput(predict_grid = predict_grid_scaled, theta = theta, covariates = NULL)
-
-save(outList, file = paste0('predictionOutput/null/prediction_NULL_', cellSize, 'm_all_elev.Rdata'))
-
-# Predict DCOV ------------------------------------------------------------------------------------------------
-
-# Named 'output'
-load(latest_files$paths[latest_files$modName == 'dcov'])
-
-theta = output$summary[1,c(1,3,7)]
-
-outList = summarizeOutput(predict_grid = predict_grid_scaled, theta = theta, covariates = NULL)
-
-save(outList, file = paste0('predictionOutput/dCov/prediction_dcov_', cellSize, 'm_all_elev.Rdata'))
-
-# Predict Continuous ------------------------------------------------------------------------------------------
-
-# named 'output'
-load(latest_files$paths[latest_files$modName == 'cont'])
-
-relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
-
-# For every cell in the raster, predict moose abundance.
-
-predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                               .combine = cbind, 
-                               .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-  exp(relOutput[1,col] + 
-        relOutput[2,col] * predict_grid_scaled@data$Elevation +
-        relOutput[3,col] * predict_grid_scaled@data$Highway   +
-        relOutput[4,col] * predict_grid_scaled@data$MinorRoad +
-        relOutput[5,col] * predict_grid_scaled@data$Northing
-      )
-                               }
-
-outList = summarizeOutput(predict_grid = predict_grid_scaled, 
-                          theta = predicted_grid_theta, 
-                          covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-
-save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_all_elev.Rdata'))
-
-predict_grid_scaled@data$MeanAbundance = outList$gridEstimates[,1]
-
-ggplot() + 
-  geom_tile(data = predict_grid_scaled %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-  # scale_fill_continuous(trans = 'log') + 
-  coord_equal()
-
-if(!skip){
+for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, certain portions of the upper elevation range will be eliminated. Three are calculated.
   
-  (sumAbundance = predict_grid_scaled@data$MeanAbundance %>% sum)
+  if(elevQuant < 1){
+    elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = elevQuant)) %>% as.logical()
+  } else {
+    elevIndex = T
+  }
   
-  plot(predict_grid@data$Elevation, predict_grid_scaled@data$MeanAbundance)
-  plot(predict_grid@data$Highway, predict_grid_scaled@data$MeanAbundance)
-  plot(predict_grid@data$MinorRoad, predict_grid_scaled@data$MeanAbundance)
-  plot(predict_grid@data$Northing, predict_grid_scaled@data$MeanAbundance)
+  pr_grid_sc_elev = predict_grid_scaled[elevIndex, ]
   
   
-  # Are we representing the covariates' populations?
-  load('gridCovariates.Rdata')
+  # Defecation rates --------------------------------------------------------------------------------------------
   
-  # Elevation - not upper elevations. Maximum is 760
-  data = ((gridCovariates$Elevation * scaleMetrics[3,3] ) + scaleMetrics[3,2] )
+  defecationRates = data.frame(reference = c(rep("Miquelle", 4),
+                                             rep("Joyal&Ricard", 3)),
+                               mean = c(10.9, 19, 13, 11.2,
+                                        12.3, 13.5, 12.1),
+                               se = c(0.5, 0.5, 0.7, 1,
+                                      NA,NA,NA),
+                               sd = c(NA, NA, NA, NA,
+                                      5.8, 6.3, 3.9),
+                               N = c(22, 8, 22, 21, 
+                                     38,  38,  38),
+                               ageClass = c('yearling', 'calf', 'yearling', 'adult',
+                                            'calf', 'adult', 'adult'),
+                               sex = c('mf', 'm', 'm', 'mf',
+                                       'mf', 'f', 'f'),
+                               status = c('captive', 'captive', 'captive', 'free-range',
+                                          'free-range', 'free-range', 'free-range'),
+                               season = c(rep('summer', 4),
+                                          rep('winter', 3))
+  )
   
-  elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
-                            value    = c(data, predict_grid@data$Elevation))
+  miquelleRows = defecationRates$reference == 'Miquelle'
   
-  ggplot() + 
-    geom_density(data = elevation_df, aes(x = value, color = variable))
+  defecationRates$sd[miquelleRows] = with(defecationRates, expr = {se * sqrt(N)})[miquelleRows]
   
-  # Highway - YES
+  # For bootstrapping purposes, fit to gamma distribution.
+  par = c(10,1)
   
-  data = ((gridCovariates$scaledHighway * scaleMetrics[4,3] ) + scaleMetrics[4,2] )
+  gammafn = function(par){
+    nll = dgamma(defecationRates$mean, shape = par[1], rate = par[2], log = T)
+    joint.nll = sum(nll)
+    return(-joint.nll)
+  }
   
-  elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
-                            value    = c(data, predict_grid@data$Highway))
+  gammafn(par)
   
-  ggplot() + 
-    geom_density(data = elevation_df, aes(x = value, color = variable))
+  (fit_nlm = nlm(p = par, f = gammafn))
   
-  # Minor road - mostly
-  
-  data = ((gridCovariates$scaledMinRoad * scaleMetrics[5,3] ) + scaleMetrics[5,2] )
-  
-  elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
-                            value    = c(data, predict_grid@data$MinorRoad))
-  
-  ggplot() + 
-    geom_density(data = elevation_df, aes(x = value, color = variable))
-  
-  # Northing - YES
-  
-  data = ((gridCovariates$Northing * scaleMetrics[1,3] ) + scaleMetrics[1,2] )
-  
-  elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
-                            value    = c(data, predict_grid@data$Northing))
-  
-  ggplot() + 
-    geom_density(data = elevation_df, aes(x = value, color = variable))
-  
-  
-}
-  
-
-# What if we lop off the outlier elevation? Max observed is 2.947981 
-
-# This results in an estimate of 390 animals. Including high peaks in the
-# prediction implies that we have 1105 - 390 = 715 animals living in the high
-# peaks. Not particularly sensible.
-
-# First option - we don't care about the number of moose in the high peaks
-# because we can't or won't effectively manage it. Eliminate those areas that
-# are greater than the 95th %ile, which are outside our observed data anyway.
-# This is a value of 3.16 in scaled elevation.
-
-# 99% option -------------------------------------------------------------------------------
-
-elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = c(.99))) %>% as.logical()
-
-pr_grid_sc_elev = predict_grid_scaled[elevIndex, ]
-
-save(pr_grid_sc_elev, file = paste0('predict_grid_scaled_',cellSize,'_elev.Rdata'))
-
-
-predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                               .combine = cbind, 
-                               .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                 exp(relOutput[1,col] + 
-                                       relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
-                                       relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
-                                       relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
-                                       relOutput[5,col] * pr_grid_sc_elev@data$Northing
-                                 )
-                               }
-
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                          theta = predicted_grid_theta, 
-                          covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-
-save(outList, file = paste0('predictionOutput/cont/prediction_cont_',cellSize,'m_elev_trim_99.Rdata'))
-
-if(!skip){
-  
-  pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
-  
-  ggplot() + 
-    geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-    # scale_fill_continuous(trans = 'log') + 
-    # geom_density_2d(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), alpha = .25, color = 'green') +
-    # geom_point(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), aes(x = Easting, y = Northing), color = 'red', shape = 1, alpha = 0.5) + 
-    # geom_point(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), color = 'white', alpha = 0.01) + 
-    coord_equal() + theme_bw() + 
-    theme(panel.background = element_rect(fill = 'gray5'),
-          plot.background  = element_rect(fill = 'gray5'),
-          legend.background = element_rect(fill = 'gray5'),
-          legend.text = element_text(color = 'gray50'),
-          legend.title = element_text(color = 'gray50'),
-          line = element_blank())
-  
-  plot_ly(data = pr_grid_sc_elev %>% data.frame %>% select(x,y,MeanAbundance)) %>% 
-    add_heatmap(x = ~x, y = ~y, z = ~MeanAbundance) %>% 
-    add_markers(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), x = ~Easting, y = ~Northing)
-  
-  (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
-  
-  popElev = (pr_grid_sc_elev@data$Elevation * scaleMetrics[3,3]) + scaleMetrics[3,2]
-  
-  plot(popElev, pr_grid_sc_elev@data$MeanAbundance)
+  gShape = fit_nlm$estimate[1]
+  gRate  = fit_nlm$estimate[2]
   
   
+  # Predict NULL ------------------------------------------------------------------------------------------------
   
-}
-
-# If this is the case, we should also recalculate the null model. There are about 528 here, vs. 555. Not a major difference.
-
-meanTheta = samples_mcmc_summ$statistics[3]
-ciTheta = samples_mcmc_summ$quantiles[c(3,15)]
-
-theta = c(samples_mcmc_summ$statistics[3], samples_mcmc_summ$quantiles[c(3,15)])
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
-
-save(outList, file = paste0('predictionOutput/null/prediction_NULL_',cellSize,'m_elev_trim_99.Rdata'))
-
-# And the dcov model
-
-load(latest_files$paths[latest_files$modName == 'dcov'])
-
-theta = output$summary[1,c(1,3,7)]
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
-
-save(outList, file = paste0('predictionOutput/dCov/prediction_dcov_', cellSize, 'm_elev_trim_99.Rdata'))
-
-# Second option
-# We impute the mean elevation there; saying that we don't know how many animals are up there, but it is probably an average number unrelated to elevation
-# Answer is also more reasonable; 420 moose total, perhaps 30 moose in the high peaks.
-
-pr_grid_sc_elev = predict_grid_scaled
-
-elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = c(.99))) %>% as.logical()
-
-pr_grid_sc_elev@data$Elevation[!elevIndex ] = 0
-
-predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                               .combine = cbind, 
-                               .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                 exp(relOutput[1,col] + 
-                                       relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
-                                       relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
-                                       relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
-                                       relOutput[5,col] * pr_grid_sc_elev@data$Northing
-                                 )
-                               }
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                          theta = predicted_grid_theta, 
-                          covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-
-save(outList, file = paste0('predictionOutput/cont/prediction_cont_',cellSize,'m_elev_mean_99.Rdata'))
-
-# predicted_grid_abundance = (predicted_grid_theta / mean(defecationRates$mean)) * (area / analysisArea)
-# 
-# pr_grid_sc_elev@data$MeanAbundance = predicted_grid_abundance
-
-if(!skip){
+  # Using nimble output for null model because it's the best one
+  latest_files$paths[latest_files$modName == 'null'] = 'modelOutputs/null/out_null_nimble_2018-08-19.Rdata'
+  
+  # Object is named 'samples'
+  load(latest_files$paths[latest_files$modName == 'null'])
+  
+  samples_mcmc = samples %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
+  
+  # Tune iterations from which to draw posterior
+  
+  coda::gelman.plot(samples_mcmc)
+  
+  samples_mcmc = samples_mcmc %>% lapply(X = ., FUN = function(x){x[20000:nrow(x),]}) %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
+  
+  samples_mcmc_summ = samples_mcmc %>% summary
+  
+  theta = numeric(length = 3)
+  theta[1] = samples_mcmc_summ$statistics[3]
+  theta[c(2,3)] = samples_mcmc_summ$quantiles[c(3,15)]
+  
+  
+  # New function 
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
+  
+  save(outList, file = paste0('predictionOutput/null/prediction_NULL_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
+  
+  # Predict DCOV ------------------------------------------------------------------------------------------------
+  
+  # Named 'output'
+  load(latest_files$paths[latest_files$modName == 'dcov'])
+  
+  theta = output$summary[1,c(1,3,7)]
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
+  
+  save(outList, file = paste0('predictionOutput/dCov/prediction_dcov_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
+  
+  # Predict Continuous ------------------------------------------------------------------------------------------
+  
+  # named 'output'
+  load(latest_files$paths[latest_files$modName == 'cont'])
+  
+  relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
+  
+  # For every cell in the raster, predict moose abundance.
+  
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
+                                 .combine = cbind, 
+                                 .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
+                                   exp(relOutput[1,col] + 
+                                         relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
+                                         relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
+                                         relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
+                                         relOutput[5,col] * pr_grid_sc_elev@data$Northing
+                                   )
+                                 }
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
+                            theta = predicted_grid_theta, 
+                            covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
+  
+  save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
   
   pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
   
@@ -608,128 +447,62 @@ if(!skip){
     # scale_fill_continuous(trans = 'log') + 
     coord_equal()
   
-  (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
-  
-  
-}
-
-# 95% option -------------------------------------------------------------------------------
-
-elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = c(.95))) %>% as.logical()
-
-pr_grid_sc_elev = predict_grid_scaled[elevIndex, ]
-
-save(pr_grid_sc_elev, file = paste0('predict_grid_scaled_',cellSize,'_elev.Rdata'))
-
-
-predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                               .combine = cbind, 
-                               .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                 exp(relOutput[1,col] + 
-                                       relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
-                                       relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
-                                       relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
-                                       relOutput[5,col] * pr_grid_sc_elev@data$Northing
-                                 )
-                               }
-
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                          theta = predicted_grid_theta, 
-                          covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-
-save(outList, file = paste0('predictionOutput/cont/prediction_cont_',cellSize,'m_elev_trim_95.Rdata'))
-
-if(!skip){
-  
-  extract(outList)
-  
-  pr_grid_sc_elev@data$MeanAbundance = gridEstimates[,1]
-  
-  ggplot() + 
-    geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-    # scale_fill_continuous(trans = 'log') + 
-    geom_density_2d(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), alpha = .25, color = 'green') +
-    geom_point(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), aes(x = Easting, y = Northing), color = 'red', shape = 1, alpha = 0.5) + 
-    # geom_point(data = scatsReferenced, aes(x = ScatEasting, y = ScatNorthing), color = 'white', alpha = 0.01) + 
-    coord_equal() + theme_bw() + 
-    theme(panel.background = element_rect(fill = 'gray5'),
-          plot.background  = element_rect(fill = 'gray5'),
-          legend.background = element_rect(fill = 'gray5'),
-          legend.text = element_text(color = 'gray50'),
-          legend.title = element_text(color = 'gray50'),
-          line = element_blank())
-  
-  plot_ly(data = pr_grid_sc_elev %>% data.frame %>% select(x,y,MeanAbundance)) %>% 
-    add_heatmap(x = ~x, y = ~y, z = ~MeanAbundance) %>% 
-    add_markers(data = tracks_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1), x = ~Easting, y = ~Northing)
-  
-  (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
-  
-  popElev = (pr_grid_sc_elev@data$Elevation * scaleMetrics[3,3]) + scaleMetrics[3,2]
-  
-  plot(popElev, pr_grid_sc_elev@data$MeanAbundance)
+  if(!skip){
+    
+    (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
+    
+    plot(predict_grid@data$Elevation, pr_grid_sc_elev@data$MeanAbundance)
+    plot(predict_grid@data$Highway, pr_grid_sc_elev@data$MeanAbundance)
+    plot(predict_grid@data$MinorRoad, pr_grid_sc_elev@data$MeanAbundance)
+    plot(predict_grid@data$Northing, pr_grid_sc_elev@data$MeanAbundance)
+    
+    
+    # Are we representing the covariates' populations?
+    load('gridCovariates.Rdata')
+    
+    # Elevation - not upper elevations. Maximum is 760
+    data = ((gridCovariates$Elevation * scaleMetrics[3,3] ) + scaleMetrics[3,2] )
+    
+    elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
+                              value    = c(data, predict_grid@data$Elevation))
+    
+    ggplot() + 
+      geom_density(data = elevation_df, aes(x = value, color = variable))
+    
+    # Highway - YES
+    
+    data = ((gridCovariates$scaledHighway * scaleMetrics[4,3] ) + scaleMetrics[4,2] )
+    
+    elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
+                              value    = c(data, predict_grid@data$Highway))
+    
+    ggplot() + 
+      geom_density(data = elevation_df, aes(x = value, color = variable))
+    
+    # Minor road - mostly
+    
+    data = ((gridCovariates$scaledMinRoad * scaleMetrics[5,3] ) + scaleMetrics[5,2] )
+    
+    elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
+                              value    = c(data, predict_grid@data$MinorRoad))
+    
+    ggplot() + 
+      geom_density(data = elevation_df, aes(x = value, color = variable))
+    
+    # Northing - YES
+    
+    data = ((gridCovariates$Northing * scaleMetrics[1,3] ) + scaleMetrics[1,2] )
+    
+    elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
+                              value    = c(data, predict_grid@data$Northing))
+    
+    ggplot() + 
+      geom_density(data = elevation_df, aes(x = value, color = variable))
+    
+    
+  }
   
   
   
 }
-# If this is the case, we should also recalculate the null model. There are about 528 here, vs. 555. Not a major difference.
-
-meanTheta = samples_mcmc_summ$statistics[3]
-ciTheta = samples_mcmc_summ$quantiles[c(3,15)]
-
-theta = c(samples_mcmc_summ$statistics[3], samples_mcmc_summ$quantiles[c(3,15)])
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
-
-save(outList, file = paste0('predictionOutput/null/prediction_NULL_',cellSize,'m_elev_trim_95.Rdata'))
-
-# Second option
-# We impute the mean elevation there; saying that we don't know how many animals are up there, but it is probably an average number unrelated to elevation
-# Answer is also more reasonable; 420 moose total, perhaps 30 moose in the high peaks.
-
-pr_grid_sc_elev = predict_grid_scaled
-
-elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = c(.95))) %>% as.logical()
-
-pr_grid_sc_elev@data$Elevation[!elevIndex ] = 0
-
-predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                               .combine = cbind, 
-                               .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                 exp(relOutput[1,col] + 
-                                       relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
-                                       relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
-                                       relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
-                                       relOutput[5,col] * pr_grid_sc_elev@data$Northing
-                                 )
-                               }
-
-outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                          theta = predicted_grid_theta, 
-                          covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-
-save(outList, file = paste0('predictionOutput/cont/prediction_cont_',cellSize,'m_elev_mean_95.Rdata'))
-
-# predicted_grid_abundance = (predicted_grid_theta / mean(defecationRates$mean)) * (area / analysisArea)
-# 
-# pr_grid_sc_elev@data$MeanAbundance = predicted_grid_abundance
-
-if(!skip){
-  
-  pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
-  
-  ggplot() + 
-    geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-    # scale_fill_continuous(trans = 'log') + 
-    coord_equal()
-  
-  (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
-  
-}
-
-
-# Predict Critical model --------------------------------------------------------------------------------------
-
-load(file = latest_files$paths[latest_files$modName == 'crit'])
 
