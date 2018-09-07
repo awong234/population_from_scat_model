@@ -752,7 +752,7 @@ assessOutputs = function(f, file.list, analysisIDs, settings){
 bs_summ = function(value, input_bs){
   calc = value / input_bs
   calc_mean = mean(calc)
-  calc_quant = quantile(calc, prob = c(0.025, 0.5, 0.95))
+  calc_quant = quantile(calc, probs = c(0.025, 0.5, 0.975))
   return(c(calc_mean, calc_quant))
 }
 
@@ -775,7 +775,7 @@ summarizeOutput = function(predict_grid, theta, covariates){
     # browser()
     MooseAbundanceBS = foreach(i = 1:length(theta), .combine = cbind) %do% (exp(theta[i]) / bootstrapDef) * (totalArea / analysisArea)
     
-    finalQuantiles = MooseAbundanceBS %>% quantile(prob = c(0.025, 0.25, 0.5, 0.75, 0.975))
+    finalQuantiles = MooseAbundanceBS %>% quantile(probs = c(0.025, 0.25, 0.5, 0.75, 0.975))
     
     outList = list(summary = MooseAbundance, summary_bs = MooseAbundanceBS, bs_quantiles = finalQuantiles)
     
