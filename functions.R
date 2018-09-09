@@ -807,6 +807,16 @@ summarizeOutput = function(predict_grid, theta, covariates){
 }
 
 
+# Remove reference categories from a data frame
+
+removeReferenceCat = function(df){
+  
+  test0 = apply(X = df, MARGIN = 2, FUN = function(x){all(x == 0)})
+  
+  return(!test0)
+  
+}
+
 # Data formatting ------------------------------------------------------------------
 
 makeGrid = function(tracks, data, buff = 300){
