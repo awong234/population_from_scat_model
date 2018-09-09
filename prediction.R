@@ -280,6 +280,7 @@ save(predict_grid_raster, file = paste0('predict_grid_raster_', cellSize, '.Rdat
 library(rgeos)
 library(sp)
 library(ggplot2)
+library(jagsUI)
 
 source('functions.R')
 
@@ -330,6 +331,9 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   
   pr_grid_sc_elev = predict_grid_scaled[elevIndex, ]
   
+  pr_grid_sc_elev_imp = predict_grid_scaled
+  pr_grid_sc_elev_imp$Elevation[!elevIndex] = 0
+  
   
   # Defecation rates --------------------------------------------------------------------------------------------
   
@@ -368,7 +372,7 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   
   gammafn(par)
   
-  (fit_nlm = nlm(p = par, f = gammafn))
+  suppressWarnings({  (fit_nlm = nlm(p = par, f = gammafn))  })
   
   gShape = fit_nlm$estimate[1]
   gRate  = fit_nlm$estimate[2]
@@ -386,7 +390,9 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   
   # Tune iterations from which to draw posterior
   
-  coda::gelman.plot(samples_mcmc)
+  if(!skip){
+    coda::gelman.plot(samples_mcmc)
+  }
   
   samples_mcmc = samples_mcmc %>% lapply(X = ., FUN = function(x){x[20000:nrow(x),]}) %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
   
@@ -408,7 +414,28 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   # Named 'output'
   load(latest_files$paths[latest_files$modName == 'dcov'])
   
-  theta = output$summary[1,c(1,3,7)]
+  if(!skip){
+    
+    traceplot(output$samples)
+    
+  }
+  
+  output_subset = output$samples %>% lapply(FUN = function(x){x[20000:nrow(x),]})
+  
+  if(!skip){
+    
+    output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% traceplot
+    output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% coda::gelman.diag()
+    
+  }
+  
+  output_subset = do.call(what = rbind, args = output_subset)
+  
+  meanTheta = mean(output_subset[,1])
+  lowerTheta = quantile(output_subset[,1], probs = 0.025)
+  upperTheta = quantile(output_subset[,1], probs = 0.975)
+  
+  theta = c('mean' = meanTheta, lowerTheta, upperTheta)
   
   outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
   
@@ -419,9 +446,24 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   # named 'output'
   load(latest_files$paths[latest_files$modName == 'cont'])
   
-  relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
+  # Inspect, see when convergence is best - okay after 15,000
+  if(!skip){
+    coda::gelman.plot(output$samples)
+  }
   
-  # For every cell in the raster, predict moose abundance.
+  output_subset = output$samples %>% lapply(FUN = function(x){x[15000 : nrow(x),]}) %>% do.call(what = rbind)
+  
+  parmeans = output_subset %>% colMeans(); parmeans = parmeans[c(1,4,5,6,7)]
+  parSD = output_subset %>% apply(MARGIN = 2, FUN = sd); parSD = parSD[c(1,4,5,6,7)]
+  parQuants = t(apply(X = output_subset, MARGIN = 2, FUN = quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))) %>% data.frame
+  parQuants = parQuants[c(1,4,5,6,7),]
+  
+  relOutput = cbind.data.frame(means = parmeans, Lower = parQuants$X2.5., Upper = parQuants$X97.5.)
+  
+  # relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
+    
+  # Trimmed ------------------------------------
+  # For every cell in the raster, predict moose abundance. Use ordinary trimmed dataset.
   
   predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
                                  .combine = cbind, 
@@ -439,6 +481,27 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
                             covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
   
   save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
+  
+  # Mean imputed ------------------------------------
+  # For every cell in the raster, predict moose abundance, this time using the mean imputed dataset.
+  
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
+                                 .combine = cbind, 
+                                 .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
+                                   exp(relOutput[1,col] + 
+                                         relOutput[2,col] * pr_grid_sc_elev_imp@data$Elevation +
+                                         relOutput[3,col] * pr_grid_sc_elev_imp@data$Highway   +
+                                         relOutput[4,col] * pr_grid_sc_elev_imp@data$MinorRoad +
+                                         relOutput[5,col] * pr_grid_sc_elev_imp@data$Northing
+                                   )
+                                 }
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp, 
+                            theta = predicted_grid_theta, 
+                            covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
+  
+  save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_mean_', elevQuant, '.Rdata'))
+  
   
   pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
   
@@ -503,6 +566,61 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   }
   
   
+  # Predict critical model -------------------------------------------------------------------------------------------
   
-}
-
+  # Load up
+  
+  load(latest_files$paths[latest_files$modName == 'crit'])
+  
+  # Inspect to see when convergence is best - looks good after 18,000
+  
+  output$samples %>% lapply(X = ., FUN = function(x){x[ , removeReferenceCat(x)] %>% coda::mcmc()}) %>% coda::traceplot()
+  
+  output_subset = output$samples %>% lapply(X = ., FUN = function(x){x[18000:nrow(x) , removeReferenceCat(x)]}) %>% do.call(what = rbind)
+  
+  parmeans = output_subset %>% colMeans(); parmeans = parmeans[c(1,4,5,6,7,8)]
+  parSD = output_subset %>% apply(MARGIN = 2, FUN = sd); parSD = parSD[c(1,4,5,6,7,8)]
+  parQuants = t(apply(X = output_subset, MARGIN = 2, FUN = quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))) %>% data.frame
+  parQuants = parQuants[c(1,4,5,6,7,8),]
+  
+  relOutput = cbind.data.frame(means = parmeans, Lower = parQuants$X2.5., Upper = parQuants$X97.5.)
+  
+  # Trimmed ------------------------------------------------------------------------------------------------------------------------
+  
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
+                                 .combine = cbind, 
+                                 .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
+                                   exp(relOutput[1,col] + 
+                                         relOutput[2,col] * pr_grid_sc_elev@data$Conifer +
+                                         relOutput[3,col] * pr_grid_sc_elev@data$Wetland   +
+                                         relOutput[4,col] * pr_grid_sc_elev@data$Elevation +
+                                         relOutput[5,col] * pr_grid_sc_elev@data$Northing
+                                   )
+                                 }
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
+                            theta = predicted_grid_theta, 
+                            covariates = "yes")
+  
+  save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
+  
+  # Mean imputed ------------------------------------------------------------------------------------------------------------------------
+  
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
+                                 .combine = cbind, 
+                                 .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
+                                   exp(relOutput[1,col] + 
+                                         relOutput[2,col] * pr_grid_sc_elev_imp@data$Conifer +
+                                         relOutput[3,col] * pr_grid_sc_elev_imp@data$Wetland   +
+                                         relOutput[4,col] * pr_grid_sc_elev_imp@data$Elevation +
+                                         relOutput[5,col] * pr_grid_sc_elev_imp@data$Northing
+                                   )
+                                 }
+  
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp, 
+                            theta = predicted_grid_theta, 
+                            covariates = "yes")
+  
+  save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_mean', elevQuant, '.Rdata'))
+  
+} # End prediction loop.
