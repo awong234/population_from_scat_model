@@ -503,12 +503,12 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_mean_', elevQuant, '.Rdata'))
   
   
-  pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
+  # pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
   
-  ggplot() + 
-    geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-    # scale_fill_continuous(trans = 'log') + 
-    coord_equal()
+  # ggplot() + 
+  #   geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
+  #   # scale_fill_continuous(trans = 'log') + 
+  #   coord_equal()
   
   if(!skip){
     
@@ -573,8 +573,9 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
   load(latest_files$paths[latest_files$modName == 'crit'])
   
   # Inspect to see when convergence is best - looks good after 18,000
-  
-  output$samples %>% lapply(X = ., FUN = function(x){x[ , removeReferenceCat(x)] %>% coda::mcmc()}) %>% coda::traceplot()
+  if(!skip){
+    output$samples %>% lapply(X = ., FUN = function(x){x[ , removeReferenceCat(x)] %>% coda::mcmc()}) %>% coda::traceplot()
+  }
   
   output_subset = output$samples %>% lapply(X = ., FUN = function(x){x[18000:nrow(x) , removeReferenceCat(x)]}) %>% do.call(what = rbind)
   
@@ -593,13 +594,14 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
                                    exp(relOutput[1,col] + 
                                          relOutput[2,col] * pr_grid_sc_elev@data$Conifer +
                                          relOutput[3,col] * pr_grid_sc_elev@data$Wetland   +
-                                         relOutput[4,col] * pr_grid_sc_elev@data$Elevation +
-                                         relOutput[5,col] * pr_grid_sc_elev@data$Northing
+                                         relOutput[4,col] * pr_grid_sc_elev@data$Mixed +
+                                         relOutput[5,col] * pr_grid_sc_elev@data$Elevation + 
+                                         relOutput[6,col] * pr_grid_sc_elev@data$Northing
                                    )
                                  }
   
-  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                            theta = predicted_grid_theta, 
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev,
+                            theta = predicted_grid_theta,
                             covariates = "yes")
   
   save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
