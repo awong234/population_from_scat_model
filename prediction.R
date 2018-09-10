@@ -3,7 +3,7 @@
 # Note; prediction will take place on all parts of the Adirondacks excluding the following areas:
 
 # Querying the APA dataset, the following masks out the uninhabitable areas.
-# LCCD_Def.LCCD_DEF IN ( 'Hamlet', 'Industrial Use', 'Intensive Use', 'Moderate Intensity', 'Water')
+# LCCD_Def.LCCD_DEF IN ( 'Hamlet', 'Water')
 
 # Setup ---------------
 
@@ -312,6 +312,14 @@ files_info = lapply(files_in_folders, FUN = function(x){
   tempDf = data.frame('paths' = x, dates) %>% arrange(dates)
   return(tempDf)
 })
+
+# Remove backup files
+
+files_info = lapply(X = files_info, FUN = function(x){
+  matches = grepl(pattern = '^((?!latest).)*$', x = x$paths, perl = T)
+  return(x[matches,])
+})
+
 
 # Only care about the latest file. 
 
@@ -624,5 +632,10 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
                             covariates = "yes")
   
   save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_mean', elevQuant, '.Rdata'))
+  
+  # Predict full model ---------------------------------------------------------------------------
+  
+  # Worry about this later. It isn't fitting the detection covariates well.
+  
   
 } # End prediction loop.
