@@ -5,16 +5,6 @@ output:
 ---
 
 
-<style>
-img.parimg {
-  width: 300px;
-}
-div.caption { 
-  padding: 25px 100px 25px 100px;
-}
-</style>
-
-
 # Population estimation from unstructured scat surveys
 
 Author: Alec Wong
