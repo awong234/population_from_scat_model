@@ -6,8 +6,8 @@ output:
 
 # Population estimation from unstructured scat surveys
 
-### Alec Wong
-### Compiled `r format(Sys.time(), format = '%d-%m-%Y')`
+Author: Alec Wong
+Compiled: `r format(Sys.time(), format = '%m-%d-%Y')`
 
 
 ```{r setup, include=FALSE}
@@ -23,3 +23,6 @@ library(rgdal)
 options(digits = 3)
 ```
 
+## Analysis and simulation
+
+Included are files to 

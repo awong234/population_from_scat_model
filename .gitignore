@@ -1,4 +1,3 @@
-*.Rdata
 *.Rhistory
 *.pdf
 *.csv
@@ -10,3 +9,8 @@ gpx*/*
 *.png
 spatCov/*
 reports/*
+Old/jagsOut/*
+predictionOutput/*
+predict_grid*
+modelOutputs/*
+Old/oneMilTest.Rdata

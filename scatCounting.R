@@ -1,4 +1,4 @@
-# Here begins the script intended to verify whether counting scats using a modified Jolly-Seber model is feasible. 
+# Here begins the script intended to verify whether counting scats using a modified open-population model is feasible. 
 
 # The steps will be 
 
@@ -10,6 +10,7 @@
 # 2018-06-07
 
 # New iteration tests to see if addition of length and time of track in grid as a covariate on p enhances estimation.
+
 
 # Setup --------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -29,6 +30,145 @@ library(plotly)
 
 source('functions.R')
 
+
+# Simpler sim to start ------------------------------------------------------------------------------------------------------------
+
+if(!file.exists('Old/simulation_grid.Rdata')){
+  
+  
+  sites = siteInfoFromFileName(path = 'trackLogs_2017/simulation/')
+  
+  out = getGPX(path = 'trackLogs_2017/simulation/', siteInfo = sites) #loads gpx files
+  
+  transPoints = convertPoints(gpx = out, siteInfo = sites, survey_year = 2017) #takes gpx files and converts to a complete dataset with points, dates, sites, and 'rounds'
+  
+  scaledData = getScaledData(transectPoints = transPoints) # Generates scaled track data, and a grid around it
+  
+  scaledGrid = scaledData$scaledGrid
+  scaledTracks = scaledData$scaledTracks
+  
+  save(scaledGrid, file = 'Old/simulation_grid.Rdata')
+  
+  
+} else {
+  
+  load('Old/simulation_grid.Rdata')
+  
+}
+
+# Of 12B2 and 15A4, 102 sites were visited total. What happens if we a) visit 100 sites, and b) duplicate observations on seq(1,100) sites?
+
+gridsVisited = scaledGrid %>% sample_n(100, replace = F)
+
+nSites = nrow(gridsVisited)
+
+# Number sampling rounds
+maxR = 3
+
+# Possible visit counts; default is either visit once or twice. 
+posVis = c(1,2)
+
+# Max number of ~~visits~~ replicates
+
+maxV = max(posVis)
+
+# Generate data
+data = simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = 0.5, maxR = maxR, posVis = posVis, p0 = 0.5)
+
+# Assume days are constant
+
+days = matrix(20, nrow = nrow(gridsVisited), ncol = maxR + 1)
+days[,1] = 0
+
+# Pull out
+y = data$y
+theta = data$Deposition
+vis = data$vis
+gridVisitData = data$GridVisitData
+N = data$N
+
+# Some summary stats
+
+popAvail = N[,,1] %>% colSums()
+
+maxT = maxR + 1
+
+
+
+# JAGS preparation ----------------------------------------------------------------------------------------------------------------
+
+
+# Want to track the following parameters:
+
+# theta
+# R
+# lambda
+
+
+# # # Jags input # # # 
+
+inits = function(){list(N1 = rowSums(y))}
+
+data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV, days = days)
+
+params = c('p00', "theta", "lambda")
+
+niter = 1e5
+nburn = niter/4
+
+jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = F)
+
+jagsOut
+
+# scats_init/nrow(scaledGrid) # Expected lambda
+# recruit_rate / nrow(scaledGrid) # Expected theta
+popAvail # N available per round
+
+jagsOut$mean$theta
+jagsOut$mean$lambda
+jagsOut$mean$p00
+
+# # # JAGS over all combos of duplication, from 1% to 100% -------------------------------------------------------------------------------------
+
+# All potential duplications, from 10% to 100%. 
+dupSpace = seq(0.01,1, length.out = 20)
+
+# Some variation in density
+lamSpace = seq(0.1, 2, length.out = 5)
+
+# Some variation in p
+pSpace = rep(0.5, 5)
+
+combos = expand.grid(dupSpace, lamSpace, pSpace) %>% rename("probdup" = "Var1", "lam" = "Var2", 'p' = 'Var3')
+combos$ID = 1:nrow(combos)
+
+save('combos', file = 'combos_621.Rdata')
+
+# If we want to add more things to look at, append to combos here.
+
+# Pick 100 random sites.
+
+gridsVisited = scaledGrid %>% sample_n(100, replace = F)
+
+registerDoParallel(cores = detectCores()-1)
+
+# What's been done already? For restarts.
+
+filesExisting = list.files('Old/jagsOut/', pattern = '.Rdata')
+
+iterComplete = filesExisting %>% regmatches(x = . , m = regexec(pattern = '\\d+', text = ., perl = T)) %>% as.integer
+
+seq_full = 1:nrow(combos)
+
+sequence = seq_full[!seq_full %in% iterComplete]
+
+# Do all the things!
+
+message(paste0('Started at ', Sys.time()))
+
+foreach(i = sequence, .packages = c("dplyr", "jagsUI")) %dopar% {
+  runFunc(comboSet = combos, iteration = i, gridsVisited = gridsVisited)
+}
 
 # Simulate encounters of scats -------------------------------------------------------------------------------------------------------------
 
@@ -196,137 +336,10 @@ print(popAvail)
 
 # maxT = 4; Round 0 : 3. 
 
-# Simpler sim to start ------------------------------------------------------------------------------------------------------------
 
-# Of 12B2 and 15A4, 102 sites were visited total. What happens if we a) visit 100 sites, and b) duplicate observations on seq(1,100) sites?
-
-gridsVisited = scaledGrid %>% sample_n(100, replace = F)
-
-nSites = nrow(gridsVisited)
-
-# Number rounds
-maxR = 3
-
-# Possible visit counts; default is either visit once or twice. 
-posVis = c(1,2)
-
-# Max number of visits
-
-maxV = max(posVis)
-
-# Generate data
-data = simScats_simple(gridsVisited = gridsVisited, scats_avg = 5, propDup = 0.5, maxR = maxR, posVis = posVis, p0 = 0.5)
-
-# Pull out
-y = data$y
-theta = data$Deposition
-vis = data$vis
-gridVisitData = data$GridVisitData
-N = data$N
-
-# Some summary stats
-
-popAvail = N[,,1] %>% colSums()
-
-maxT = maxR + 1
-
-
-
-# JAGS preparation ----------------------------------------------------------------------------------------------------------------
-
-# Need to initialize the following:
-
-# N1[i] ; initial deposition at sites visited.
-# N[i,t,v] ; population at each round, with duplicate visits indexed by v.
-# R[i,t] ; recruitment following t = 1. R[i,1] = 0.
-# p0[i,t] ; detection probability at site i, time t. p0[i,1] = 0. All other p0[i,2:maxT] = 0.8.
-
-# NOTE: See section 2.3.1 in jags manual, must set p0[i,1] = R[i,1] = NA.
-
-# Need to supply the following as data:
-
-# counts y[i,t,v], with the first column being 0's.
-# visits vis[i,t,v], with the first column being 0's. 
-
-# Want to track the following parameters:
-
-# N_time
-# N_tot
-# theta
-# R
-# lambda
-
-# Format counts
-
-
-# # # Jags input # # # 
-
-inits = function(){list(R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
-                        N1 = rowSums(y))}
-
-data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV)
-
-params = c("N_time", 'p00', "theta", "lambda")
-
-niter = 1e5
-nburn = niter/4
-
-jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = F)
-
-jagsOut
-
-# scats_init/nrow(scaledGrid) # Expected lambda
-# recruit_rate / nrow(scaledGrid) # Expected theta
-popAvail # N available per round
-
-jagsOut$mean$N_time
-jagsOut$mean$theta
-jagsOut$mean$lambda
-jagsOut$mean$p00
-
-# # # JAGS over all combos of duplication, from 1% to 100% -------------------------------------------------------------------------------------
-
-# All potential duplications, from 10% to 100%. 
-dupSpace = seq(0.01,1, length.out = 20)
-
-# Some variation in density
-lamSpace = seq(0.1, 2, length.out = 5)
-
-# Some variation in p
-pSpace = rep(0.5, 5)
-
-combos = expand.grid(dupSpace, lamSpace, pSpace) %>% rename("probdup" = "Var1", "lam" = "Var2", 'p' = 'Var3')
-combos$ID = 1:nrow(combos)
-
-save('combos', file = 'combos_621.Rdata')
-
-# If we want to add more things to look at, append to combos here.
-
-# Pick 100 random sites.
-
-gridsVisited = scaledGrid %>% sample_n(100, replace = F)
-
-registerDoParallel(cores = detectCores()-1)
-
-# What's been done already? For restarts.
-
-filesExisting = list.files('jagsOut/', pattern = '.Rdata')
-
-iterComplete = filesExisting %>% regmatches(x = . , m = regexec(pattern = '\\d+', text = ., perl = T)) %>% as.integer
-
-seq_full = 1:nrow(combos)
-
-sequence = seq_full[!seq_full %in% iterComplete]
-
-# Do all the things!
-
-message(paste0('Started at ', Sys.time()))
-
-foreach(i = sequence, .packages = c("dplyr", "jagsUI")) %dopar% {
-  runFunc(comboSet = combos, iteration = i, gridsVisited = gridsVisited)
-}
-
-
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# DEPRECATED  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 ### Experimental idea - exposure model ################################################################################
 
 # Try out exposure model for 12B2. 
