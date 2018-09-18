@@ -130,19 +130,23 @@ jagsOut$mean$p00
 
 # # # JAGS over all combos of duplication, from 1% to 100% -------------------------------------------------------------------------------------
 
-# All potential duplications, from 10% to 100%. 
-dupSpace = seq(0.01,1, length.out = 20)
-
-# Some variation in density
-lamSpace = seq(0.1, 2, length.out = 5)
-
-# Some variation in p
-pSpace = rep(0.5, 5)
-
-combos = expand.grid(dupSpace, lamSpace, pSpace) %>% rename("probdup" = "Var1", "lam" = "Var2", 'p' = 'Var3')
-combos$ID = 1:nrow(combos)
-
-save('combos', file = 'combos_621.Rdata')
+if(file.exists('Old/combos_621.Rdata')){
+  load('Old/combos_621.Rdata')
+} else {
+  # All potential duplications, from 10% to 100%. 
+  dupSpace = seq(0.01,1, length.out = 20)
+  
+  # Some variation in density
+  lamSpace = seq(0.1, 2, length.out = 5)
+  
+  # Some variation in p
+  pSpace = rep(0.5, 5)
+  
+  combos = expand.grid(dupSpace, lamSpace, pSpace) %>% rename("probdup" = "Var1", "lam" = "Var2", 'p' = 'Var3')
+  combos$ID = 1:nrow(combos)
+  
+  save('combos', file = 'Old/combos_621.Rdata')
+}
 
 # If we want to add more things to look at, append to combos here.
 
@@ -154,7 +158,11 @@ registerDoParallel(cores = detectCores()-1)
 
 # What's been done already? For restarts.
 
-filesExisting = list.files('Old/jagsOut/', pattern = '.Rdata')
+if(dir.exists('Old/jagsOut/')){
+  filesExisting = list.files('Old/jagsOut/', pattern = '.Rdata')
+} else {
+  dir.create('Old/jagsOut/')
+}
 
 iterComplete = filesExisting %>% regmatches(x = . , m = regexec(pattern = '\\d+', text = ., perl = T)) %>% as.integer
 

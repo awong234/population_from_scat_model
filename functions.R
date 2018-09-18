@@ -676,21 +676,26 @@ runFunc = function(comboSet, iteration, gridsVisited){
   gridVisitData = data$GridVisitData
   N = data$N
   
+  # Assume days are constant
+  
+  days = matrix(20, nrow = nrow(gridsVisited), ncol = maxR + 1)
+  days[,1] = 0
+  
+  
   popAvail = N[,,1] %>% colSums()
   
   maxT = maxR + 1
   
-  inits = function(){list(R = cbind(rep(NA,nSites), matrix(data = 1, nrow = nSites, ncol = maxR)),
-                          N1 = rowSums(y))}
+  inits = function(){list(N1 = rowSums(y))}
   
-  data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV)
+  data = list(y = y, vis = vis, nSites = nSites, maxT = maxT, maxV = maxV, days = days)
   
-  params = c("N_time", 'p00', "theta", "lambda")
+  params = c('p00', "theta", "lambda")
   
   niter = 1e5
   nburn = niter/4
   
-  jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
+  jagsOut = jags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.iter = niter, n.burnin = nburn, parallel = T)
   
   relevantData = jagsOut$summary
   
