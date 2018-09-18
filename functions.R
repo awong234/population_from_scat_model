@@ -705,7 +705,7 @@ runFunc = function(comboSet, iteration, gridsVisited){
                 "vis" = vis,
                 "output" = relevantData)
   
-  save('allOut', file = paste0('jagsOut/out_', iteration,'.Rdata'))
+  save('allOut', file = paste0('Old/jagsOut/out_', iteration,'.Rdata'))
   
   
 }
