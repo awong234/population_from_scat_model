@@ -53,10 +53,10 @@ params = c("theta00", "p00", "lambda0")
 
 # New autojags FN
 
-ninc = 100
-nburn = 100
-nadapt = 100
-savePath = 'modelOutputs/'
+ninc = 2000
+nburn = 2000
+nadapt = 10000
+savePath = 'modelOutputs/null/'
 fileNameTemp = paste0('out_null_', Sys.time() %>% format("%Y-%m-%d"), "_")
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_null.txt', n.chains = 4, n.adapt = nadapt, 
@@ -69,7 +69,7 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
 # the previous while loop. The arguments passed are *probably* not necessary,
 # but better than risking defaults being set.
 
-load('modelOutputs/latestBackup.Rdata')
+load('modelOutputs/null/latestBackup.Rdata')
 
 output = autojags(data = NULL, parameters.to.save = params, n.chains = 4, n.adapt = nadapt, iter.increment = ninc, 
                   n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6, 
@@ -561,12 +561,14 @@ ninc = 2000
 nburn = 2000
 savePath = 'modelOutputs/fullModel_tl_shared/'
 # Change to continuing date
-fileNameTemp = 'out_full_2018-08-19_'
+fileNameTemp = 'out_full_2018-09-03_'
 
-output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_full.txt', n.chains = 4, n.adapt = nadapt, 
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_full_tl_shared.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE
+                  savePath = savePath, fileTemplate = fileNameTemp, continue = TRUE
 )
+
+system(command = 'python sendMail.py')
 
 
 
@@ -795,6 +797,171 @@ savePath = 'modelOutputs/rDcov/'
 fileNameTemp = 'out_reduced_Dcov_2018-08-19_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_reduced_Dcov_only.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+)
+
+# Model against temperature ---------------------------
+
+
+# Model to test against the effects of temperature
+
+# Setup & data
+
+library(dplyr)
+library(jagsUI)
+
+
+source('functions.R')
+
+
+load('data_cleaned.Rdata')
+load('metadata.Rdata')
+extract(data)
+
+# Want to create a function of JAGS runs that operates similarly to autojags, but that saves intermediate output. I don't want interruptions cancelling work.
+
+load('detectCovar.Rdata')
+load('gridCovariates.Rdata')
+
+extract(detectCovar)
+
+# Add covariates to data
+
+data$gridCovariates = gridCovariates
+data$Dcov = Dcov
+data$dogCov = dogCov
+data$humCov = humCov
+
+
+params = c("theta00", "p00", "lambda0", 
+           # Lambda covars
+           'beta_hab_softwood', 
+           'beta_hab_hardwood', 
+           'beta_hab_wetland', 
+           'beta_hab_mixed', 
+           #'beta_elev', 
+           'beta_highway', 
+           'beta_minor_road', 
+           #'beta_northing', 
+           #'beta_easting',
+           
+           # Detect covars - dog
+           #'beta_detect_skye', 'beta_detect_scooby', 'beta_detect_ranger', 'beta_detect_max', 'beta_detect_hiccup', 
+           # Detect covars - handler
+           #'beta_detect_suzie', 'beta_detect_jennifer', 'beta_detect_justin',
+           # Detect covars - dist track in grid cell
+           'beta_detect_dist'
+)
+
+# New autojags FN
+
+ninc = 2000
+nburn = 2000
+nadapt = 10000
+savePath = 'modelOutputs/no_temp/'
+fileNameTemp = paste0('out_no_temp', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileTemplate = fileNameTemp
+)
+
+system(command = 'python sendMail.py')
+
+# Continue if interrupted
+
+ninc = 1000
+nburn = 1000
+nadapt = 10000
+savePath = 'modelOutputs/no_temp/'
+# Change to match whatever continuing from
+fileNameTemp = 'out_no_temp_DATEDATEDATEDATE'
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+)
+
+# Model against temperature, and detection ----------------------------
+
+# Model to test against the effects of temperature, omitting track length on detection
+
+# Setup & data
+
+library(dplyr)
+library(jagsUI)
+
+
+source('functions.R')
+
+
+load('data_cleaned.Rdata')
+load('metadata.Rdata')
+extract(data)
+
+# Want to create a function of JAGS runs that operates similarly to autojags, but that saves intermediate output. I don't want interruptions cancelling work.
+
+load('detectCovar.Rdata')
+load('gridCovariates.Rdata')
+
+extract(detectCovar)
+
+# Add covariates to data
+
+data$gridCovariates = gridCovariates
+data$Dcov = Dcov
+data$dogCov = dogCov
+data$humCov = humCov
+
+
+params = c("theta00", "p00", "lambda0", 
+           # Lambda covars
+           'beta_hab_softwood', 
+           'beta_hab_hardwood', 
+           'beta_hab_wetland', 
+           'beta_hab_mixed', 
+           #'beta_elev', 
+           'beta_highway', 
+           'beta_minor_road'#, 
+           #'beta_northing', 
+           #'beta_easting',
+           
+           # Detect covars - dog
+           #'beta_detect_skye', 'beta_detect_scooby', 'beta_detect_ranger', 'beta_detect_max', 'beta_detect_hiccup', 
+           # Detect covars - handler
+           #'beta_detect_suzie', 'beta_detect_jennifer', 'beta_detect_justin',
+           # Detect covars - dist track in grid cell
+           #'beta_detect_dist'
+)
+
+# New autojags FN
+
+ninc = 2000
+nburn = 2000
+nadapt = 10000
+savePath = 'modelOutputs/no_temp_no_dcov/'
+fileNameTemp = paste0('out_no_temp_no_dcov', Sys.time() %>% format("%Y-%m-%d"), "_")
+if(!dir.exists(savePath)){dir.create(savePath)}
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp_no_dcov.txt', n.chains = 4, n.adapt = nadapt, 
+                  iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
+                  savePath = savePath, fileTemplate = fileNameTemp
+)
+
+system(command = 'python sendMail.py')
+
+# Continue if interrupted
+
+ninc = 1000
+nburn = 1000
+nadapt = 10000
+savePath = 'modelOutputs/no_temp_no_dcov/'
+# Change to match whatever continuing from
+fileNameTemp = 'out_no_temp_DATEDATEDATEDATE'
+
+output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp_no_dcov.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
