@@ -1,3 +1,4 @@
+# Represents human effects and temperature effects.
 # Reduced covariate model with only continouous effects
 # 11 betas
 

@@ -1,4 +1,4 @@
-# Reduced covariate model with only continouous effects, changed to share coefficients between lambda and theta
+# Reduced covariate model with only the effect of track length on detection.
 # 1 betas
 
 model

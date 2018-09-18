@@ -1,5 +1,6 @@
 # Full covariate model, changed to share covariate coefficients between theta and lambda
 # 19 betas
+# Detection covariate coefficients on dog and handler have been determined to be confounded, due to one handler working almost exclusively with one dog.
 
 model
 {

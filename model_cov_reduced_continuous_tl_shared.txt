@@ -1,3 +1,4 @@
+# Represents human effects and temperature effects.
 # Reduced covariate model with only continouous effects, changed to share coefficients between lambda and theta
 # 5 betas
 

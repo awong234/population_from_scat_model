@@ -1,6 +1,5 @@
-# Full covariate model, changed to share covariate coefficients between theta and lambda
-# 19 betas
-
+# This model includes landscape covariates excluding northing and elevation to test the temperature hypothesis. 
+# It excludes the detection covariate to test this as well.
 model
 {
     # Priors

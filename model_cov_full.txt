@@ -1,5 +1,7 @@
 # Full covariate model
 # 29 betas
+# WARNING:
+# Detection covariate coefficients on dog and handler have been determined to be confounded, due to one handler working almost exclusively with one dog.
 
 model
 {

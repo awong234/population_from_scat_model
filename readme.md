@@ -13,10 +13,41 @@ div.caption {
 # Population estimation from unstructured scat surveys
 
 Author: Alec Wong
+
 Compiled: 09-18-2018
 
 
 
+
+## Analysis
+
+Included are files to carry out an analysis using data from a survey of the Adirondacks moose population, collected in 2016. The file to run this will be `analysis.R`; it loads the files `data_cleaned.Rdata` and `metadata.Rdata`. The `data` object contains the observation data `y`, the visit array `vis`, the days between visits `days`, the number of grid cells visited `nSites`, the number of primary occasions (including initial deposition) `maxT`, and the maximum number of grid cell replicates `maxV`. 
+
+The `metadata` object contains information on the grid cells visited `visitedGridInfo`, the temporal information of transect visitation `roundVisits`, and the grid cells overlaid upon each transect `grids`. 
+
+See the article referenced for details on these structures.
+
+There are several models, each defined and elaborated upon in the text files within this directory, including:
+
+* `model_cov_full.txt`
+* `model_cov_full_tl_shared.txt`
+* `model_cov_no_temp.txt`
+* `model_cov_no_temp_no_dcov.txt`
+* `model_cov_reduced_continuous`
+* `model_cov_reduced_continuous_tl_shared.txt`
+* `model_cov_reduced_crit.txt`
+* `model_cov_reduced_crit_tl_shared.txt`
+* `model_cov_reduced_Dcov_only.txt`
+* `model_null.txt`
+
+## Data cleaning
+
+The order of operations for cleaning and formatting the data are the following:
+
+1. `trackDataCleaning.R`
+1. `dataFormatting.R`
+
+**Not all of the files are available, so these scripts will NOT develop the final data products included.** Much of the files required to run these scripts are larger than the file size limit permits. The scripts are included for transparency reasons alone, and missing files will need to be obtained upon request.
 
 ## Simulation
 
@@ -26,18 +57,10 @@ In short, the output describes an ability to identify parameters of the model, p
 
 ### Parameter estimation
 
-<div>
-<img class='parimg' src = 'images/old/lamplot.png'>
-<img class='parimg' src = 'images/old/thetaplot.png'>
-<img class='parimg' src = 'images/old/p00.png'>
-</div>
+![](https://github.com/awong234/population_from_scat_model/blob/master/images/lamplot.png)
+![](https://github.com/awong234/population_from_scat_model/blob/master/images/p00.png)
+![](https://github.com/awong234/population_from_scat_model/blob/master/images/thetaplot.png)
 
-<div class='caption'>
-<center>
 Figure 1: Parameter estimates across a gradient of lambda -- initial scat deposition -- probability of detection, and the proportion of sites that were replicated.
-</center>
-</div>
 
-
-
-Note that estimation improves dramatically after approximately 25% of the sites are revisited.
+Note that estimation improves dramatically after approximately 25% of the sites are revisited. Following this result, we proceeded with the analysis.
