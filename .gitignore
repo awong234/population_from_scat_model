@@ -5,7 +5,6 @@ fwdjsmodel*
 trackLogs*/*
 gpx*/*
 *.html
-*.png
 spatCov/*
 reports/*
 Old/jagsOut/*
@@ -13,3 +12,4 @@ predictionOutput/*
 predict_grid*
 modelOutputs/*
 Old/oneMilTest.Rdata
+images/old/*

@@ -37,7 +37,11 @@ options(digits = 3)
 
 ## Analysis
 
+### Statistical Model
 
+There are three parameters to be estimated. 
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=\begin{gathered}&space;\Delta_{g,0}&space;\sim&space;\text{Poisson}(\lambda_g)\\&space;\lambda_g&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\begin{gathered}&space;\Delta_{g,0}&space;\sim&space;\text{Poisson}(\lambda_g)\\&space;\lambda_g&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" title="\begin{gathered} \Delta_{g,0} \sim \text{Poisson}(\lambda_g)\\ \lambda_g = \exp(\boldsymbol{\beta}*\textbf{X}) \end{gathered}" /></a>
 
 ## Simulation
 
@@ -48,9 +52,9 @@ In short, the output describes an ability to identify parameters of the model, p
 ### Parameter estimation
 
 <div>
-<img class='parimg' src = 'images/old/lamplot.png'>
-<img class='parimg' src = 'images/old/thetaplot.png'>
-<img class='parimg' src = 'images/old/p00.png'>
+<img class='parimg' src = 'images/lamplot.png'>
+<img class='parimg' src = 'images/thetaplot.png'>
+<img class='parimg' src = 'images/p00.png'>
 </div>
 
 <div class='caption'>
