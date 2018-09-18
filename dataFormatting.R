@@ -99,6 +99,57 @@ names(rleTracks) = roundVisits$RndBySt
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+# Plot example of replication of cells, for paper
+
+if(!skip){
+  
+  for(i in 0:3){
+    
+    tracks12B2 = tracks2016_points %>% data.frame %>% filter(Site == '12B2', RoundNo == i)
+    
+    grid12B2 = grids$`12B2` %>% data.frame
+    
+    rleList = list(rleTracks$`12B2.Clearing`,
+                   rleTracks$`12B2.Sample1`,
+                   rleTracks$`12B2.Sample2`,
+                   rleTracks$`12B2.Sample3`)
+    
+    rle12B2 = rleList[[i+1]]$values %>% table %>% data.frame()
+    colnames(rle12B2) = c('gridID', 'Freq')
+    rle12B2$gridID = as.integer(as.character(rle12B2$gridID))
+    
+    grid12B2 = grid12B2 %>% left_join(rle12B2, by = c('id' = 'gridID'))
+    grid12B2$Freq[is.na(grid12B2$Freq)] = 0
+    
+    buff = 100
+    
+    source('images/red_pallete.R')
+    
+    colors = rev(a(n = 6))
+    names(colors) = c("0", "1", "2", "3", '4', '5')
+    
+    center_point = grid12B2 %>% filter(id == 80642) %>% select(x,y)
+    
+    Cairo::Cairo(width = 1024, height = 1024, file = paste0('images/track',i,'.png'), dpi = 150)
+    print(
+      ggplot() + 
+        geom_tile(data = grid12B2, aes(x = x, y = y, fill = factor(Freq)), color = 'gray50', show.legend = F) + 
+        geom_path(data = tracks12B2, aes(x = Easting, y = Northing), color = 'red') + 
+        geom_text(data = grid12B2, aes(x = x, y = y, label = paste('r =',Freq)), size = 4) + 
+        coord_equal(xlim = center_point[,1]+ c(-buff, buff), ylim = center_point[,2] + c(-buff, buff)) +
+        theme_bw() + 
+        scale_fill_manual(values = colors, limits = c('0','1','2','3', '4', '5'), name = expression(paste("Secondary\nOccasion (", r[g], ")"))) + 
+        guides(fill = guide_legend()) + 
+        theme(axis.title = element_blank(),
+              axis.text = element_blank(),
+              axis.ticks = element_blank()
+              )
+    )
+    dev.off()
+    
+  }
+  
+}
 
 
 # SECOND - find cells where scats were collected (using the referenced scat location data `scatsReferenced`) --------------------------------------------
