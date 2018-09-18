@@ -1,6 +1,5 @@
 *.Rhistory
 *.pdf
-*.csv
 *.zip
 fwdjsmodel*
 trackLogs*/*
