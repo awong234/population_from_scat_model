@@ -26,6 +26,10 @@ options(digits = 3)
 
 ## Analysis
 
+### NOTICE: YOU WILL NEED TO INSTALL THE VERSION OF JAGS IN MY FORK IN ORDER TO RUN THIS ANALYSIS.
+
+Run this to install. `devtools::install_github(repo = 'awong234/jagsUI')`.
+
 Included are files to carry out an analysis using data from a survey of the Adirondacks moose population, collected in 2016. The file to run this will be `analysis.R`; it loads the files `data_cleaned.Rdata` and `metadata.Rdata`. The `data` object contains the observation data `y`, the visit array `vis`, the days between visits `days`, the number of grid cells visited `nSites`, the number of primary occasions (including initial deposition) `maxT`, and the maximum number of grid cell replicates `maxV`. 
 
 The `metadata` object contains information on the grid cells visited `visitedGridInfo`, the temporal information of transect visitation `roundVisits`, and the grid cells overlaid upon each transect `grids`. 
