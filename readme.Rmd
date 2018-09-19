@@ -33,6 +33,13 @@ Three parameters are estimated -
 <a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>, and
 <a href="https://www.codecogs.com/eqnedit.php?latex=p" target="_blank"><img src="https://latex.codecogs.com/gif.latex?p" title="p" /></a>.
 
+<a href="https://www.codecogs.com/eqnedit.php?latex=\lambda" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\lambda" title="\lambda" /></a> 
+describes the mean initial deposition of scats before any sampling is performed.
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=\begin{gathered}&space;\Delta_0&space;\sim&space;\text{Poisson}(\lambda)\\&space;\lambda&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\begin{gathered}&space;\Delta_0&space;\sim&space;\text{Poisson}(\lambda)\\&space;\lambda&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" title="\begin{gathered} \Delta_0 \sim \text{Poisson}(\lambda)\\ \lambda = \exp(\boldsymbol{\beta}*\textbf{X}) \end{gathered}" /></a>
+
+
+
 
 
 ## Analysis
