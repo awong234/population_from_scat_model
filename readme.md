@@ -13,7 +13,11 @@ Compiled: 09-19-2018
 
 This model is intended to be used with broad-scale scat searches, where it is inefficient or impossible to perform clearing of standing crops of scats, and where distance sampling is not easily performed, such as with detection dog searches. 
 
-Three parameters are estimated - <a href="https://www.codecogs.com/eqnedit.php?latex=\lambda" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\lambda" title="\lambda" /></a>, <a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>, and <a href="https://www.codecogs.com/eqnedit.php?latex=p" target="_blank"><img src="https://latex.codecogs.com/gif.latex?p" title="p" /></a>. 
+Three parameters are estimated - [lambda][], and [theta][] and [p][]. 
+
+[lambda]: <a href="https://www.codecogs.com/eqnedit.php?latex=\lambda" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\lambda" title="\lambda" /></a>
+[theta] : <a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>
+[p]     : <a href="https://www.codecogs.com/eqnedit.php?latex=p" target="_blank"><img src="https://latex.codecogs.com/gif.latex?p" title="p" /></a>
 
 ## Analysis
 
