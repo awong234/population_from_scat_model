@@ -32,6 +32,29 @@ represents the mean daily accumulation rate of scats, such that:
 
 where, <a href="https://www.codecogs.com/eqnedit.php?latex=d_t" target="_blank"><img src="https://latex.codecogs.com/gif.latex?d_t" title="d_t" /></a> is the intervening days between visits on occasions t and t+1. 
 
+Finally, p is derived from visitation of a grid cell multiple times within a single occasion t. That is to say, if the grid cell is observed more than once, we can construct a probability statement conditional on the latent variables 
+<a href="https://www.codecogs.com/eqnedit.php?latex=\lambda" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\lambda" title="\lambda" /></a> and 
+<a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>. 
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=y_{t,r}&space;\sim&space;\text{Binomial}(N_{t,r},p)" target="_blank"><img src="https://latex.codecogs.com/gif.latex?y_{t,r}&space;\sim&space;\text{Binomial}(N_{t,r},p)" title="y_{t,r} \sim \text{Binomial}(N_{t,r},p)" /></a>
+
+Here, the observations 
+<a href="https://www.codecogs.com/eqnedit.php?latex=y_{t,r}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?y_{t,r}" title="y_{t,r}" /></a> 
+are indexed by occasion t and replicate observation r. The observations are conditional on the population of scats available to be sampled 
+<a href="https://www.codecogs.com/eqnedit.php?latex=N_{t,r}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?N_{t,r}" title="N_{t,r}" /></a>
+
+The population of scats has the following model:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=N_{t,r|t=1}&space;=&space;\Delta_{0}\\&space;N_{t,r|t>1,r=1}&space;=&space;N_{t-1,r_{max}}&space;-&space;y_{t-1,r_{max}}&space;&plus;&space;\Delta_{t-1}\\&space;N_{t,r|t>1,r>1}&space;=&space;N_{t,r-1}&space;-&space;y_{t,r-1}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?N_{t,r|t=1}&space;=&space;\Delta_{0}\\&space;N_{t,r|t>1,r=1}&space;=&space;N_{t-1,r_{max}}&space;-&space;y_{t-1,r_{max}}&space;&plus;&space;\Delta_{t-1}\\&space;N_{t,r|t>1,r>1}&space;=&space;N_{t,r-1}&space;-&space;y_{t,r-1}" title="N_{t,r|t=1} = \Delta_{0}\\ N_{t,r|t>1,r=1} = N_{t-1,r_{max}} - y_{t-1,r_{max}} + \Delta_{t-1}\\ N_{t,r|t>1,r>1} = N_{t,r-1} - y_{t,r-1}" /></a>
+
+where 
+<a href="https://www.codecogs.com/eqnedit.php?latex=N_{t,r}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?N_{t,r}" title="N_{t,r}" /></a>
+is deterministically reduced by observations 
+<a href="https://www.codecogs.com/eqnedit.php?latex=y_{t,r}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?y_{t,r}" title="y_{t,r}" /></a> 
+and increased by accumulation
+<a href="https://www.codecogs.com/eqnedit.php?latex=\Delta_t" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\Delta_t" title="\Delta_t" /></a>.
+
+This model is applied to all grid cells observed, assuming independence between them.
 
 
 ## Analysis
