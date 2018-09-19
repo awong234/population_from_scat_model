@@ -884,6 +884,8 @@ output = autojags(data = data, inits = inits, parameters.to.save = params, model
                   savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
 )
 
+system(command = 'python sendMail.py')
+
 # Model against temperature, and detection ----------------------------
 
 # Model to test against the effects of temperature, omitting track length on detection

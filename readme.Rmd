@@ -70,6 +70,6 @@ In short, the output describes an ability to identify parameters of the model, p
 ![](https://github.com/awong234/population_from_scat_model/blob/master/images/p00.png)
 ![](https://github.com/awong234/population_from_scat_model/blob/master/images/thetaplot.png)
 
-Figure 1: Parameter estimates across a gradient of lambda -- initial scat deposition -- probability of detection, and the proportion of sites that were replicated.
+Figure 1: Parameter estimates across a gradient of lambda -- initial scat deposition -- and the proportion of sites that were replicated. Probability of detection was held at 50%, and theta was held at 1, representing a mean deposition rate of 1 scat per visit per grid cell. These numbers were deemed reasonable given experience at sites of heavy moose density.
 
 Note that estimation improves dramatically after approximately 25% of the sites are revisited. Following this result, we proceeded with the analysis.
