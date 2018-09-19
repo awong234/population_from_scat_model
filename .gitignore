@@ -5,6 +5,8 @@ fwdjsmodel*
 trackLogs*/*
 gpx*/*
 *.html
+Old/readme.html
+!readme.html
 spatCov/*
 reports/*
 Old/jagsOut/*
