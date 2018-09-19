@@ -18,12 +18,19 @@ Three parameters are estimated -
 <a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>, and
 <a href="https://www.codecogs.com/eqnedit.php?latex=p" target="_blank"><img src="https://latex.codecogs.com/gif.latex?p" title="p" /></a>.
 
+For the moment, consider these parameters with respect to a single grid cell among many visited over the course of a survey.
+
 <a href="https://www.codecogs.com/eqnedit.php?latex=\lambda" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\lambda" title="\lambda" /></a> 
 describes the mean initial deposition of scats before any sampling is performed.
 
 <a href="https://www.codecogs.com/eqnedit.php?latex=\begin{gathered}&space;\Delta_0&space;\sim&space;\text{Poisson}(\lambda)\\&space;\lambda&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\begin{gathered}&space;\Delta_0&space;\sim&space;\text{Poisson}(\lambda)\\&space;\lambda&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" title="\begin{gathered} \Delta_0 \sim \text{Poisson}(\lambda)\\ \lambda = \exp(\boldsymbol{\beta}*\textbf{X}) \end{gathered}" /></a>
 
+<a href="https://www.codecogs.com/eqnedit.php?latex=\theta" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\theta" title="\theta" /></a>
+represents the mean daily accumulation rate of scats, such that:
 
+<a href="https://www.codecogs.com/eqnedit.php?latex=\begin{gathered}&space;\Delta_t&space;\sim&space;\text{Poisson}(\theta*d_t)\\&space;\theta&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\begin{gathered}&space;\Delta_t&space;\sim&space;\text{Poisson}(\theta*d_t)\\&space;\theta&space;=&space;\exp(\boldsymbol{\beta}*\textbf{X})&space;\end{gathered}" title="\begin{gathered} \Delta_t \sim \text{Poisson}(\theta*d_t)\\ \theta = \exp(\boldsymbol{\beta}*\textbf{X}) \end{gathered}" /></a>
+
+where, <a href="https://www.codecogs.com/eqnedit.php?latex=d_t" target="_blank"><img src="https://latex.codecogs.com/gif.latex?d_t" title="d_t" /></a> is the intervening days between visits on occasions t and t+1. 
 
 
 
