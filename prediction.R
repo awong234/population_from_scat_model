@@ -401,10 +401,10 @@ files_info = lapply(X = files_info, FUN = function(x){
 })
 
 
-# Only care about the latest file. 
+# Only care about the latest file.
 
 latest_files = lapply(files_info, FUN = function(x){tail(x, n = 1)}) %>% do.call(what = rbind.data.frame)
-latest_files$modName = c("full", "null", "cont", "crit", "dcov")
+latest_files$modName = c("full", 'notemp', 'notemp_nodist', "null", "cont", "crit", "dcov")
 latest_files$paths = as.character(latest_files$paths)
 
 ### Perform prediction -----------------------------------------------------------------------------------------
