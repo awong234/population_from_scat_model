@@ -16,9 +16,9 @@ source('functions.R')
 skip = T
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # -------------------- Obtain grid, mask by uninhabitable -----------------------
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 cellSize = 1000
 
@@ -35,66 +35,66 @@ adkbound = rgdal::readOGR(dsn = 'spatCov/adkbound/adkbound.shp', layer = 'adkbou
 # Plotting transects, for paper
 
 if(!skip){
-  
+
   library(maps)
   library(mapdata)
   library(cowplot)
-  
+
   newyork = map_data(map = 'state', region = 'new york')
-  coordinates(newyork) = ~long + lat 
+  coordinates(newyork) = ~long + lat
   proj4string(newyork) = CRS('+init=epsg:4269')
   newyork = spTransform(newyork, CRSobj = "+proj=utm +zone=18 +datum=WGS84")
-  
-  
+
+
   tracks2016_points = rgdal::readOGR(dsn = 'gpxTracks2016_points_CLEANED', layer = 'tracks2016_points_clean', stringsAsFactors = F)
   attr(tracks2016_points@coords, 'dimnames') = list(NULL, c("Easting", "Northing"))
-  
+
   one_from_each = tracks2016_points %>% data.frame %>% group_by(Site) %>% sample_n(size = 1) %>% as.data.frame
   cluster = regmatches(x = one_from_each$Site, m = regexpr(text = one_from_each$Site, perl = T, pattern = '\\d+\\w'))
-  
+
   one_from_each$Cluster = cluster
-  
+
   # Get bounding boxes for each cluster
-  
+
   bbox_fn = function(coords, buff){
-    
+
     temp = bbox(coords) %>% as.matrix() %>% t %>% data.frame
     grid = expand.grid(temp[,1], temp[,2])[c(1,2,4,3),]
-    
+
     grid = grid + c(-buff, buff, buff, -buff,
                     -buff, -buff, buff, buff)
-    
+
     return(grid)
-    
+
   }
-  
-  boxes = one_from_each %>% split(f = one_from_each$Cluster) %>% lapply(FUN = function(x){bbox_fn(cbind(x$Easting, x$Northing), buff = 2000)}) %>% 
+
+  boxes = one_from_each %>% split(f = one_from_each$Cluster) %>% lapply(FUN = function(x){bbox_fn(cbind(x$Easting, x$Northing), buff = 2000)}) %>%
     reshape2::melt(id.var = c("Var1", "Var2")) %>% rename(x = Var1,  y= Var2, Cluster = L1)
-  
+
   dists = fields::rdist(cbind(one_from_each$Easting, one_from_each$Northing))
-  
+
   dists_sorted = apply(X = dists, MARGIN = 2, FUN = sort)
   dists_sorted[2,] %>% summary
-  
+
   Cairo::Cairo(file = 'images/sitePlot.png', width = 768*2, height = 1024*2, dpi = 200)
-  
-  a = ggplot() + 
-    geom_path(data = adkbound@polygons[[1]]@Polygons[[1]]@coords %>% data.frame(), aes(x = X1, y = X2)) + 
-    geom_point(data = one_from_each, 
-               aes(x = Easting, y = Northing)) + 
-    geom_polygon(data = boxes, aes(x = x, y = y, group = Cluster), fill = 'gray80', color = 'black', alpha = 0.1) + 
+
+  a = ggplot() +
+    geom_path(data = adkbound@polygons[[1]]@Polygons[[1]]@coords %>% data.frame(), aes(x = X1, y = X2)) +
+    geom_point(data = one_from_each,
+               aes(x = Easting, y = Northing)) +
+    geom_polygon(data = boxes, aes(x = x, y = y, group = Cluster), fill = 'gray80', color = 'black', alpha = 0.1) +
     # scale_color_manual(values = sample(viridis(31, option = "B"))) +
-    # scale_color_viridis(discrete = T) + 
+    # scale_color_viridis(discrete = T) +
     xlab("Easting") + ylab("Northing") +
-    coord_equal() + 
-    theme_bw() + 
+    coord_equal() +
+    theme_bw() +
     theme(panel.grid = element_rect(fill = NA))
-  
-  b = ggplot() + 
-    geom_path(data = newyork %>% data.frame, aes(x = long, y = lat, group = group)) + 
-    geom_path(data = adkbound@polygons[[1]]@Polygons[[1]]@coords %>% data.frame(), aes(x = X1, y = X2), color = 'red', size = 1.2) + 
-    coord_equal() + 
-    theme_bw() + 
+
+  b = ggplot() +
+    geom_path(data = newyork %>% data.frame, aes(x = long, y = lat, group = group)) +
+    geom_path(data = adkbound@polygons[[1]]@Polygons[[1]]@coords %>% data.frame(), aes(x = X1, y = X2), color = 'red', size = 1.2) +
+    coord_equal() +
+    theme_bw() +
     theme(panel.grid = element_blank(),
           axis.ticks = element_blank(),
           axis.text = element_blank(),
@@ -102,12 +102,12 @@ if(!skip){
           panel.background = element_rect(fill = NA),
           plot.margin = margin(-0.1,-0.1,-0.1,-0.1))
   Cairo::Cairo(file = 'images/sitePlot.png', width = 768*2, height = 1024*2, dpi = 200)
-  ggdraw() + 
-    draw_plot(a) + 
+  ggdraw() +
+    draw_plot(a) +
     draw_plot(b, 0.7, 0.06, 0.25, 0.25)
   dev.off()
-    
-  
+
+
 }
 
 
@@ -117,7 +117,7 @@ if(!skip){
 uhm = rgdal::readOGR(dsn = 'spatCov/uninhabitable_mask/uninhabitable_mask.shp')
 
 # Use complex option.
-# Build grid, promote to SpatialGridDataFrame. Clip to adbound, then to uhm, and keep track of area. 
+# Build grid, promote to SpatialGridDataFrame. Clip to adbound, then to uhm, and keep track of area.
 # Use gIntersection from `rgeos`
 
 predict_grid = makegrid(x = adkbound, cellsize = cellSize) %>% rename(x = x1, y = x2)
@@ -180,26 +180,26 @@ predict_grid@data$Elevation %>% is.na %>% any
 which(predict_grid@data$Elevation %>% is.na) %>% str
 
 if(!skip){
-  
-  ggplot() + 
-    geom_tile(data = predict_grid %>% data.frame, aes(x = x, y = y, fill = Elevation)) + 
-    scale_fill_gradient(limits = c(0,1600), na.value = 'red') + 
+
+  ggplot() +
+    geom_tile(data = predict_grid %>% data.frame, aes(x = x, y = y, fill = Elevation)) +
+    scale_fill_gradient(limits = c(0,1600), na.value = 'red') +
     coord_equal()
-  
-  # Or use resample - essentially the same thing, but 
-  
+
+  # Or use resample - essentially the same thing, but
+
   test = raster::resample(elev, predict_grid_raster)
-  
+
   test_sp = as(test, "SpatialPixelsDataFrame")
   test_df = test_sp %>% data.frame %>% rename(Elevation = Extract_Elev1)
-  
+
   test_df$Elevation %>% summary
-  
-  ggplot() + 
-    geom_tile(data = test_df, aes(x = x, y = y, fill = Elevation)) + 
-    scale_fill_gradient(limits = c(0,1600)) + 
+
+  ggplot() +
+    geom_tile(data = test_df, aes(x = x, y = y, fill = Elevation)) +
+    scale_fill_gradient(limits = c(0,1600)) +
     coord_equal()
-  
+
 }
 
 # Format hwy raster ----------------------------------------------
@@ -249,24 +249,24 @@ Mode <- function(x) {
 habSummary = raster::extract(hab, predict_grid, fun = 'Mode')
 
 if(!skip){
-  
+
   # Plot to see that it's okay
-  
+
   raster::getValues(habSummary) %>% str
-  
+
   test_sp = as(habSummary, "SpatialPixelsDataFrame")
   test_df = test_sp %>% data.frame %>% rename(Habitat = tnc_habs_clip_proj_reclass)
-  
+
   test_df$Habitat %>% table
-  
-  ggplot() + 
-    geom_tile(data = test_df, aes(x = x, y = y, fill = Habitat %>% factor)) + 
+
+  ggplot() +
+    geom_tile(data = test_df, aes(x = x, y = y, fill = Habitat %>% factor)) +
     scale_fill_discrete(na.value = 'red') +
     coord_equal()
-  
+
   raster::plot(habSummary, col = topo.colors(n = 5), breaks = c(0,1,2,3,4,5271), colNA = 'red')
-  
-  
+
+
 }
 
 # One-hot habitat raster ----------------------------------------------
@@ -274,21 +274,21 @@ if(!skip){
 # Remove NA values, which are masked out; see that it is the same length as predict_grid@data %>% nrow
 (raster::getValues(habSummary)[!is.na(raster::getValues(habSummary))] %>% length) == nrow(predict_grid@data)
 
-# Plot it to see if it's the same - yep looks good. 
+# Plot it to see if it's the same - yep looks good.
 
 if(!skip){
-  
+
   coords = predict_grid@coords
   data   = raster::getValues(habSummary)[!is.na(raster::getValues(habSummary))]
   data   = habSummary
-  
+
   toPlot = data.frame(coords, data)
-  
-  toPlot %>% 
-    ggplot() + 
+
+  toPlot %>%
+    ggplot() +
     geom_tile(aes(x = x, y = y, fill = data %>% factor)) + coord_equal()
-  
-  
+
+
 }
 
 habData = raster::getValues(habSummary)[!is.na(raster::getValues(habSummary))]
@@ -312,8 +312,8 @@ predict_grid@data$Mixed = habDummy$Mixed
 predict_grid@data$Wetland = habDummy$Wetland
 
 if(!skip){
-  ggplot(predict_grid %>% data.frame) + 
-    geom_tile(aes(x = x, y = y, fill = Conifer %>% factor)) + 
+  ggplot(predict_grid %>% data.frame) +
+    geom_tile(aes(x = x, y = y, fill = Conifer %>% factor)) +
     coord_equal() + theme_bw()
 }
 
@@ -324,21 +324,21 @@ load('scaleMetrics.Rdata')
 predict_grid_scaled = predict_grid
 
 for(covariate in scaleMetrics$Covariate[1:5]){
-  
+
   try({
-    predict_grid_scaled@data[[covariate]] = scale(predict_grid_scaled@data[[covariate]], 
+    predict_grid_scaled@data[[covariate]] = scale(predict_grid_scaled@data[[covariate]],
                                                 center = scaleMetrics %>% filter(Covariate == covariate) %>% pull(Center),
                                                 scale  = scaleMetrics %>% filter(Covariate == covariate) %>% pull(Scale)
   ) %>% as.numeric
   })
-  
+
 }
 
 # Convert back to make sure it's right - yes it's right, within rounding error.
 
 for(covariate in scaleMetrics$Covariate[1:5]){
   print(
-  ((((predict_grid_scaled@data[[covariate]] * scaleMetrics %>% filter(Covariate == covariate) %>% pull(Scale)) + 
+  ((((predict_grid_scaled@data[[covariate]] * scaleMetrics %>% filter(Covariate == covariate) %>% pull(Scale)) +
       scaleMetrics %>% filter(Covariate == covariate) %>% pull(Center)) - predict_grid@data[[covariate]]) < 0.01) %>% na.omit %>% all
   )
 }
@@ -410,21 +410,21 @@ latest_files$paths = as.character(latest_files$paths)
 ### Perform prediction -----------------------------------------------------------------------------------------
 
 for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, certain portions of the upper elevation range will be eliminated. Three are calculated.
-  
+
   if(elevQuant < 1){
     elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = elevQuant)) %>% as.logical()
   } else {
     elevIndex = T
   }
-  
+
   pr_grid_sc_elev = predict_grid_scaled[elevIndex, ]
-  
+
   pr_grid_sc_elev_imp = predict_grid_scaled
   pr_grid_sc_elev_imp$Elevation[!elevIndex] = 0
-  
-  
+
+
   # Defecation rates --------------------------------------------------------------------------------------------
-  
+
   defecationRates = data.frame(reference = c(rep("Miquelle", 4),
                                              rep("Joyal&Ricard", 3)),
                                mean = c(10.9, 19, 13, 11.2,
@@ -433,7 +433,7 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
                                       NA,NA,NA),
                                sd = c(NA, NA, NA, NA,
                                       5.8, 6.3, 3.9),
-                               N = c(22, 8, 22, 21, 
+                               N = c(22, 8, 22, 21,
                                      38,  38,  38),
                                ageClass = c('yearling', 'calf', 'yearling', 'adult',
                                             'calf', 'adult', 'adult'),
@@ -444,331 +444,361 @@ for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, c
                                season = c(rep('summer', 4),
                                           rep('winter', 3))
   )
-  
+
   miquelleRows = defecationRates$reference == 'Miquelle'
-  
+
   defecationRates$sd[miquelleRows] = with(defecationRates, expr = {se * sqrt(N)})[miquelleRows]
-  
+
   # For bootstrapping purposes, fit to gamma distribution.
   par = c(10,1)
-  
+
   gammafn = function(par){
     nll = dgamma(defecationRates$mean, shape = par[1], rate = par[2], log = T)
     joint.nll = sum(nll)
     return(-joint.nll)
   }
-  
+
   gammafn(par)
-  
+
   suppressWarnings({  (fit_nlm = nlm(p = par, f = gammafn))  })
-  
+
   gShape = fit_nlm$estimate[1]
   gRate  = fit_nlm$estimate[2]
-  
-    if(!skip){
-    
+
+  if(!skip){
+
     # Notice that it's similar to normal distribution, but won't extend below 0.
     set.seed(2)
     df = data.frame("gamma" = rgamma(n = 1e6, shape = gShape, rate = gRate),
                     "normal" = rnorm(n = 1e6, mean = mean(defecationRates$mean), sd = sd(defecationRates$mean))
     )
-    
+
     summary(df$normal)
     summary(df$gamma)
-    
+
     df = reshape2::melt(df, variable.name = 'Distribution')
-    
-    ggplot() + 
-      geom_density(data = df, aes(x = value, color = Distribution, fill = Distribution), alpha = 0.1) + 
-      scale_color_manual(values = c("red4", "gray33")) +
-      scale_fill_manual(values = c("red4", "royalblue4")) +
-      theme_bw() + 
-      theme(panel.grid = element_blank())
-    
+
+    Cairo::Cairo(width = 1024, height = 768, file = 'images/gammaNormalDensity.png', dpi = 150)
+    ggplot() +
+      geom_density(data = df, aes(x = value, color = Distribution, fill = Distribution), alpha = 0.1, color = 'gray80') +
+      scale_fill_manual(values = c("cyan", "gray")) +
+      theme_bw() +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text.x = element_text(color = 'gray60'),
+            axis.text.y = element_text(color = 'gray60'),
+            axis.title = element_blank(),
+            legend.position = 'bottom',
+            panel.background = element_rect(fill = 'transparent'),
+            plot.background = element_rect(fill = 'transparent'),
+            panel.border = element_rect(color = 'gray80', fill = 'transparent'),
+            legend.text = element_text(color = 'gray60'),
+            legend.title = element_text(color = 'gray60'),
+            legend.background = element_rect(fill = 'transparent'),
+            legend.key = element_rect(fill = 'transparent')
+      )
+    dev.off()
+
+    Cairo::Cairo(width = 1024, height = 768, file = 'images/gammaDensity.png', dpi = 150)
+    ggplot() +
+      stat_density(aes(x = rgamma(n = 1e6, shape = gShape, rate = gRate)), color = 'gray80', geom = 'polygon', fill = 'cyan', alpha = 0.1) +
+      theme_bw() +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text.x = element_text(color = 'gray60'),
+            axis.text.y = element_text(color = 'gray60'),
+            axis.title = element_blank(),
+            legend.position = 'bottom',
+            panel.background = element_rect(fill = 'transparent'),
+            plot.background = element_rect(fill = 'transparent'),
+            panel.border = element_rect(color = 'gray80', fill = 'transparent')
+
+      )
+    dev.off()
   }
-  
-  
+
+
   # Predict NULL ------------------------------------------------------------------------------------------------
-  
-  # Optionally use nimble output for null model 
+
+  # Optionally use nimble output for null model
   # latest_files$paths[latest_files$modName == 'null'] = 'modelOutputs/null/out_null_nimble_2018-08-19.Rdata'
-  
+
   # Object is named 'samples'
   # load(latest_files$paths[latest_files$modName == 'null'])
-  # 
+  #
   # samples_mcmc = samples %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
-  # 
+  #
   # # Tune iterations from which to draw posterior
-  # 
+  #
   # if(!skip){
   #   coda::gelman.plot(samples_mcmc)
   # }
-  # 
+  #
   # samples_mcmc = samples_mcmc %>% lapply(X = ., FUN = function(x){x[20000:nrow(x),]}) %>% lapply(X = ., FUN = function(x){coda::mcmc(x)}) %>% coda::as.mcmc.list()
-  # 
+  #
   # samples_mcmc_summ = samples_mcmc %>% summary
-  # 
-  # 
-  # 
+  #
+  #
+  #
   # theta = numeric(length = 3)
   # theta[1] = samples_mcmc_summ$statistics[3]
   # theta[c(2,3)] = samples_mcmc_summ$quantiles[c(3,15)]
-  
+
   # Named 'output'
   load(latest_files$paths[latest_files$modName == 'null'])
-  
+
   if(!skip){
-    
+
     traceplot(output$samples)
-    
+
   }
-  
+
   output_subset = output$samples
-  
+
   if(!skip){
-    
+
     output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% traceplot
     output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% coda::gelman.diag()
-    
+
   }
-  
+
   output_subset = do.call(what = rbind, args = output_subset)
-  
+
   meanTheta = mean(output_subset[,1])
   lowerTheta = quantile(output_subset[,1], probs = 0.025)
   upperTheta = quantile(output_subset[,1], probs = 0.975)
-  
+
   theta = c('mean' = meanTheta, lowerTheta, upperTheta)
 
 
-  # New function 
-  
+  # New function
+
   outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
-  
+
   save(outList, file = paste0('predictionOutput/null/prediction_NULL_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
-  
+
   # Predict DCOV ------------------------------------------------------------------------------------------------
-  
+
   # Named 'output'
   load(latest_files$paths[latest_files$modName == 'dcov'])
-  
+
   if(!skip){
-    
+
     traceplot(output$samples)
-    
+
   }
-  
+
   output_subset = output$samples %>% lapply(FUN = function(x){x[20000:nrow(x),]})
-  
+
   if(!skip){
-    
+
     output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% traceplot
     output_subset %>% lapply(FUN = function(x){coda::mcmc(x)}) %>% coda::gelman.diag()
-    
+
   }
-  
+
   output_subset = do.call(what = rbind, args = output_subset)
-  
+
   meanTheta = mean(output_subset[,1])
   lowerTheta = quantile(output_subset[,1], probs = 0.025)
   upperTheta = quantile(output_subset[,1], probs = 0.975)
-  
+
   theta = c('mean' = meanTheta, lowerTheta, upperTheta)
-  
+
   outList = summarizeOutput(predict_grid = pr_grid_sc_elev, theta = theta, covariates = NULL)
-  
+
   save(outList, file = paste0('predictionOutput/dCov/prediction_dcov_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
-  
+
   # Predict Continuous ------------------------------------------------------------------------------------------
-  
+
   # named 'output'
   load(latest_files$paths[latest_files$modName == 'cont'])
-  
+
   # Inspect, see when convergence is best - okay after 15,000
   if(!skip){
     coda::gelman.plot(output$samples)
   }
-  
+
   output_subset = output$samples %>% lapply(FUN = function(x){x[15000 : nrow(x),]}) %>% do.call(what = rbind)
-  
+
   parmeans = output_subset %>% colMeans(); parmeans = parmeans[c(1,4,5,6,7)]
   parSD = output_subset %>% apply(MARGIN = 2, FUN = sd); parSD = parSD[c(1,4,5,6,7)]
   parQuants = t(apply(X = output_subset, MARGIN = 2, FUN = quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))) %>% data.frame
   parQuants = parQuants[c(1,4,5,6,7),]
-  
+
   relOutput = cbind.data.frame(means = parmeans, Lower = parQuants$X2.5., Upper = parQuants$X97.5.)
-  
+
   # relOutput = output$summary[c(1,4,5,6,7),c(1,3,7)] %>% data.frame %>% rename(Lower = `X2.5.`, Upper = `X97.5.`)
-    
+
   # Trimmed ------------------------------------
   # For every cell in the raster, predict moose abundance. Use ordinary trimmed dataset.
-  
-  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                                 .combine = cbind, 
+
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput),
+                                 .combine = cbind,
                                  .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                   exp(relOutput[1,col] + 
+                                   exp(relOutput[1,col] +
                                          relOutput[2,col] * pr_grid_sc_elev@data$Elevation +
                                          relOutput[3,col] * pr_grid_sc_elev@data$Highway   +
                                          relOutput[4,col] * pr_grid_sc_elev@data$MinorRoad +
                                          relOutput[5,col] * pr_grid_sc_elev@data$Northing
                                    )
                                  }
-  
-  outList = summarizeOutput(predict_grid = pr_grid_sc_elev, 
-                            theta = predicted_grid_theta, 
+
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev,
+                            theta = predicted_grid_theta,
                             covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-  
+
   save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
-  
+
   # Mean imputed ------------------------------------
   # For every cell in the raster, predict moose abundance, this time using the mean imputed dataset.
-  
-  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                                 .combine = cbind, 
+
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput),
+                                 .combine = cbind,
                                  .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                   exp(relOutput[1,col] + 
+                                   exp(relOutput[1,col] +
                                          relOutput[2,col] * pr_grid_sc_elev_imp@data$Elevation +
                                          relOutput[3,col] * pr_grid_sc_elev_imp@data$Highway   +
                                          relOutput[4,col] * pr_grid_sc_elev_imp@data$MinorRoad +
                                          relOutput[5,col] * pr_grid_sc_elev_imp@data$Northing
                                    )
                                  }
-  
-  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp, 
-                            theta = predicted_grid_theta, 
+
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp,
+                            theta = predicted_grid_theta,
                             covariates = c("Northing", "Elevation", "Highway", "MinorRoad"))
-  
+
   save(outList, file = paste0('predictionOutput/cont/prediction_cont_', cellSize, 'm_elev_mean_', elevQuant, '.Rdata'))
-  
-  
+
+
   # pr_grid_sc_elev@data$MeanAbundance = outList$gridEstimates[,1]
-  
-  # ggplot() + 
-  #   geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) + 
-  #   # scale_fill_continuous(trans = 'log') + 
+
+  # ggplot() +
+  #   geom_tile(data = pr_grid_sc_elev %>% data.frame, aes(x = x, y = y, fill = MeanAbundance)) +
+  #   # scale_fill_continuous(trans = 'log') +
   #   coord_equal()
-  
+
   if(!skip){
-    
+
     (sumAbundance = pr_grid_sc_elev@data$MeanAbundance %>% sum)
-    
+
     plot(predict_grid@data$Elevation, pr_grid_sc_elev@data$MeanAbundance)
     plot(predict_grid@data$Highway, pr_grid_sc_elev@data$MeanAbundance)
     plot(predict_grid@data$MinorRoad, pr_grid_sc_elev@data$MeanAbundance)
     plot(predict_grid@data$Northing, pr_grid_sc_elev@data$MeanAbundance)
-    
-    
+
+
     # Are we representing the covariates' populations?
     load('gridCovariates.Rdata')
-    
+
     # Elevation - not upper elevations. Maximum is 760
     data = ((gridCovariates$Elevation * scaleMetrics[3,3] ) + scaleMetrics[3,2] )
-    
+
     elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
                               value    = c(data, predict_grid@data$Elevation))
-    
-    ggplot() + 
+
+    ggplot() +
       geom_density(data = elevation_df, aes(x = value, color = variable))
-    
+
     # Highway - YES
-    
+
     data = ((gridCovariates$scaledHighway * scaleMetrics[4,3] ) + scaleMetrics[4,2] )
-    
+
     elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
                               value    = c(data, predict_grid@data$Highway))
-    
-    ggplot() + 
+
+    ggplot() +
       geom_density(data = elevation_df, aes(x = value, color = variable))
-    
+
     # Minor road - mostly
-    
+
     data = ((gridCovariates$scaledMinRoad * scaleMetrics[5,3] ) + scaleMetrics[5,2] )
-    
+
     elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
                               value    = c(data, predict_grid@data$MinorRoad))
-    
-    ggplot() + 
+
+    ggplot() +
       geom_density(data = elevation_df, aes(x = value, color = variable))
-    
+
     # Northing - YES
-    
+
     data = ((gridCovariates$Northing * scaleMetrics[1,3] ) + scaleMetrics[1,2] )
-    
+
     elevation_df = data.frame(variable = c(rep('data', length(data)), rep('population', nrow(predict_grid))),
                               value    = c(data, predict_grid@data$Northing))
-    
-    ggplot() + 
+
+    ggplot() +
       geom_density(data = elevation_df, aes(x = value, color = variable))
-    
-    
+
+
   }
-  
-  
+
+
   # Predict critical model -------------------------------------------------------------------------------------------
-  
+
   # Load up
-  
+
   load(latest_files$paths[latest_files$modName == 'crit'])
-  
+
   # Inspect to see when convergence is best - looks good after 18,000
   if(!skip){
     output$samples %>% lapply(X = ., FUN = function(x){x[ , removeReferenceCat(x)] %>% coda::mcmc()}) %>% coda::traceplot()
     output$samples %>% lapply(X = ., FUN = function(x){x[, removeReferenceCat(x)] %>% coda::mcmc()}) %>% coda::gelman.plot()
-  
+
     }
-  
+
   output_subset = output$samples %>% lapply(X = ., FUN = function(x){x[18000:nrow(x) , removeReferenceCat(x)]}) %>% do.call(what = rbind)
-  
+
   parmeans = output_subset %>% colMeans(); parmeans = parmeans[c(1,4,5,6,7,8)]
   parSD = output_subset %>% apply(MARGIN = 2, FUN = sd); parSD = parSD[c(1,4,5,6,7,8)]
   parQuants = t(apply(X = output_subset, MARGIN = 2, FUN = quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))) %>% data.frame
   parQuants = parQuants[c(1,4,5,6,7,8),]
-  
+
   relOutput = cbind.data.frame(means = parmeans, Lower = parQuants$X2.5., Upper = parQuants$X97.5.)
-  
+
   # Trimmed ------------------------------------------------------------------------------------------------------------------------
-  
-  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                                 .combine = cbind, 
+
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput),
+                                 .combine = cbind,
                                  .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                   exp(relOutput[1,col] + 
+                                   exp(relOutput[1,col] +
                                          relOutput[2,col] * pr_grid_sc_elev@data$Conifer +
                                          relOutput[3,col] * pr_grid_sc_elev@data$Wetland   +
                                          relOutput[4,col] * pr_grid_sc_elev@data$Mixed +
-                                         relOutput[5,col] * pr_grid_sc_elev@data$Elevation + 
+                                         relOutput[5,col] * pr_grid_sc_elev@data$Elevation +
                                          relOutput[6,col] * pr_grid_sc_elev@data$Northing
                                    )
                                  }
-  
+
   outList = summarizeOutput(predict_grid = pr_grid_sc_elev,
                             theta = predicted_grid_theta,
                             covariates = c("Northing", "Elevation", "Deciduous", "Conifer", "Wetland", "Mixed"))
-  
+
   save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_', elevQuant, '.Rdata'))
-  
+
   # Mean imputed ------------------------------------------------------------------------------------------------------------------------
-  
-  predicted_grid_theta = foreach(col = 1:ncol(relOutput), 
-                                 .combine = cbind, 
+
+  predicted_grid_theta = foreach(col = 1:ncol(relOutput),
+                                 .combine = cbind,
                                  .final = function(x){attr(x = x, which = 'dimnames') = list(NULL, names(relOutput)); return(x)}) %do% {
-                                   exp(relOutput[1,col] + 
+                                   exp(relOutput[1,col] +
                                          relOutput[2,col] * pr_grid_sc_elev_imp@data$Conifer +
                                          relOutput[3,col] * pr_grid_sc_elev_imp@data$Wetland   +
                                          relOutput[4,col] * pr_grid_sc_elev_imp@data$Mixed +
-                                         relOutput[5,col] * pr_grid_sc_elev_imp@data$Elevation + 
+                                         relOutput[5,col] * pr_grid_sc_elev_imp@data$Elevation +
                                          relOutput[6,col] * pr_grid_sc_elev_imp@data$Northing
                                    )
                                  }
-  
-  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp, 
-                            theta = predicted_grid_theta, 
+
+  outList = summarizeOutput(predict_grid = pr_grid_sc_elev_imp,
+                            theta = predicted_grid_theta,
                             covariates = "yes")
-  
+
   save(outList, file = paste0('predictionOutput/crit/prediction_crit_', cellSize, 'm_elev_mean_', elevQuant, '.Rdata'))
-  
+
     # Predict full model ---------------------------------------------------------------------------
-  
+
   # Worry about this later. It isn't fitting the detection covariates well.
-  
-  
+
+
 } # End prediction loop.
