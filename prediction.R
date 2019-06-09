@@ -409,7 +409,7 @@ latest_files$paths = as.character(latest_files$paths)
 
 ### Perform prediction -----------------------------------------------------------------------------------------
 
-for(elevQuant in c(1, 0.99, 0.95)){ # For the purposes of accurate prediction, certain portions of the upper elevation range will be eliminated. Three are calculated.
+for(elevQuant in c(0.99)){ # For the purposes of accurate prediction, certain portions of the upper elevation range will be eliminated. Three are calculated.
 
   if(elevQuant < 1){
     elevIndex = (predict_grid_scaled@data$Elevation < quantile(predict_grid_scaled@data$Elevation, prob = elevQuant)) %>% as.logical()
