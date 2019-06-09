@@ -872,16 +872,16 @@ system(command = 'python sendMail.py')
 
 # Continue if interrupted
 
-ninc = 1000
-nburn = 1000
+ninc = 2000
+nburn = 2000
 nadapt = 10000
 savePath = 'modelOutputs/no_temp/'
 # Change to match whatever continuing from
-fileNameTemp = 'out_no_temp_DATEDATEDATEDATE'
+fileNameTemp = 'out_no_temp_2018-09-18_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+                  savePath = savePath, fileTemplate = fileNameTemp, continue = TRUE
 )
 
 system(command = 'python sendMail.py')
@@ -956,14 +956,16 @@ system(command = 'python sendMail.py')
 
 # Continue if interrupted
 
-ninc = 1000
-nburn = 1000
+ninc = 2000
+nburn = 2000
 nadapt = 10000
 savePath = 'modelOutputs/no_temp_no_dcov/'
 # Change to match whatever continuing from
-fileNameTemp = 'out_no_temp_DATEDATEDATEDATE'
+fileNameTemp = 'out_no_temp_no_dcov2018-09-20_'
 
 output = autojags(data = data, inits = inits, parameters.to.save = params, model.file = 'model_cov_no_temp_no_dcov.txt', n.chains = 4, n.adapt = nadapt, 
                   iter.increment = ninc, n.burnin = nburn, save.all.iter = T, parallel = T, n.cores = 4, max.iter = 1e6,
-                  savePath = savePath, fileNameTemplate = fileNameTemp, continue = TRUE, lastModel = output
+                  savePath = savePath, fileTemplate = fileNameTemp, continue = TRUE
 )
+
+system(command = 'python sendMail.py')
